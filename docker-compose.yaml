@@ -1,0 +1,39 @@
+version: '3'
+networks:
+  net:
+    driver: bridge
+
+volumes:
+  cernunnos-data: {}
+
+services:
+  cernunnos:
+    build: .
+    ports:
+      - 8080:8080
+    networks:
+      - net
+    depends_on:
+      database:
+        condition: service_started
+
+  cernunnos-db:
+    image: postgres:16
+    restart: always
+    environment:
+      - POSTGRES_USER=cernunnos
+      - POSTGRES_PASSWORD=cernunnos
+      - POSTGRES_DB=cernunnos
+    volumes:
+      - cernunnos-data:/var/lib/postgresql/data
+      - ./migrations/cernunnos.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - 5432:5432
+    networks:
+      - net
+    healthcheck:
+      test: [ "CMD", "-U", "cernunnos", "pg_isready" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s

@@ -1,0 +1,85 @@
+run:
+  concurrency: 8
+  timeout: 10m
+  issues-exit-code: 1
+  tests: true
+  skip-dirs-use-default: false
+
+
+  modules-download-mode: readonly
+  allow-parallel-runners: true
+  allow-serial-runners: false
+
+output:
+  format: line-number:stdout
+  print-issued-lines: false
+  print-linter-name: true
+  uniq-by-line: false
+  path-prefix: ""
+  sort-results: true
+
+issues:
+  fix: false
+
+linters:
+  disable-all: true
+  enable:
+    - cyclop
+    - errcheck
+    - dupl
+    - exhaustive
+    - unparam
+    - unused
+    - usestdlibvars
+    - wastedassign
+    - prealloc
+    - rowserrcheck
+    - sqlclosecheck
+    - funlen
+    - errorlint
+    - gocritic
+    - godox
+    - gofmt
+    - lll
+    - misspell
+    - wsl
+    - unconvert
+
+  fast: false
+
+linters-settings:
+  errcheck:
+    check-type-assertions: true
+    check-blank: true
+    disable-default-exclusions: true
+
+  lll:
+    line-length: 120
+    tab-width: 4
+
+rules:
+  - linters:
+      - dupl
+      - gofmt
+      - lll
+      - misspell
+      - funlen
+      - usestdlibvars
+    severity: info
+  - linters:
+      - cyclop
+      - errcheck
+      - errorlint
+      - wastedassign
+      - exhaustive
+      - unconvert
+      - unparam
+      - unused
+    severity: minor
+  - linters:
+      - prealloc
+      - rowserrcheck
+      - sqlclosecheck
+      - wsl
+      - gocritic
+    severity: major
