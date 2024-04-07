@@ -3,6 +3,7 @@ package sqltools
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 )
 
@@ -22,40 +23,60 @@ type TransactionalStorage interface {
 
 type txCtxKey struct{}
 
-func Transaction(ctx context.Context, db *sql.DB, f func(ctx context.Context) error) error {
+func Transaction(ctx context.Context, db *sql.DB, fn func(context.Context) error) error {
 	var err error
 	var tx *sql.Tx = new(sql.Tx)
 
+	hasExternalTx := hasExternalTransaction(ctx)
+
 	defer func() {
-		if err == nil {
-			err = tx.Commit()
+		if hasExternalTx {
+			if err != nil {
+				err = fmt.Errorf("error perform operation. %w", err)
+				return
+			}
+
+			return
 		}
 
 		if err != nil {
 			if rbErr := tx.Rollback(); rbErr != nil {
-				err = fmt.Errorf("error rollback transaction: %w", rbErr)
+				err = errors.Join(fmt.Errorf("error rollback transaction. %w", rbErr), err)
 				return
 			}
-			err = fmt.Errorf("error commit transaction: %w", err)
+
+			err = fmt.Errorf("error execute transactional operation. %w", err)
 			return
+		}
+
+		if commitErr := tx.Commit(); commitErr != nil {
+			if rbErr := tx.Rollback(); rbErr != nil {
+				err = errors.Join(fmt.Errorf("error rollback transaction. %w", rbErr), commitErr, err)
+				return
+			}
+
+			err = fmt.Errorf("error commit transaction. %w", err)
 		}
 	}()
 
-	if _, ok := ctx.Value(txCtxKey{}).(*sql.Tx); !ok {
+	if !hasExternalTx {
 		tx, err = db.BeginTx(ctx, &sql.TxOptions{
 			Isolation: sql.LevelRepeatableRead,
 		})
 		if err != nil {
-			return fmt.Errorf("error begin transaction: %w", err)
+			return fmt.Errorf("error begin transaction. %w", err)
 		}
 
 		ctx = context.WithValue(ctx, txCtxKey{}, tx)
 	}
 
-	err = f(ctx)
-	if err != nil {
-		return fmt.Errorf("error run transaction function: %w", err)
+	return fn(ctx)
+}
+
+func hasExternalTransaction(ctx context.Context) bool {
+	if _, ok := ctx.Value(txCtxKey{}).(*sql.Tx); ok {
+		return true
 	}
 
-	return err
+	return false
 }

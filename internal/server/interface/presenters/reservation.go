@@ -25,6 +25,7 @@ func (p *reservationPresenter) ResponseReservations(reservations []*models.Reser
 
 	response := &dto.ReservationsResponse{
 		Reservations: mappedReservations,
+		Offset:       uint32(len(mappedReservations)),
 	}
 
 	rawResponse, err := json.Marshal(&response)

@@ -1,6 +1,7 @@
 package errors
 
 import (
+	"cernunnos/internal/usecase/repository/reservations"
 	"errors"
 	"fmt"
 )
@@ -29,10 +30,17 @@ func NewErrorHandler() ErrorHandler {
 }
 
 func (e *errorHandler) Handle(err error) APIError {
-	// TODO map errors
 	switch {
-	case errors.Is(err, nil):
-		return e.errorBuilder.Build(0, "")
+	case errors.Is(err, ErrorBadRequest):
+		return e.errorBuilder.Build(400, "Bad Request!")
+	case errors.Is(err, ErrorInternalServerError):
+		return e.errorBuilder.Build(500, "Internal Server Error!")
+	case errors.Is(err, ErrorInvalidRequestPath):
+		return e.errorBuilder.Build(400, "Invalid Path!")
+	case errors.Is(err, ErrorUnexpectedData):
+		return e.errorBuilder.Build(400, "Invalid Or Unexpected Request Data!")
+	case errors.Is(err, reservations.ErrorNotEnoughSpace):
+		return e.errorBuilder.Build(507, "Not Enough Space In Storage(s)!")
 	default:
 		return e.errorBuilder.Build(500, "Oops! Something went wrong!")
 	}

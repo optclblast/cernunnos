@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+
+	"github.com/go-chi/chi/v5"
 )
 
 func (s *Server) storages(ctx context.Context, r *http.Request) ([]byte, error) {
@@ -30,6 +32,10 @@ func (s *Server) storageProducts(ctx context.Context, r *http.Request) ([]byte, 
 	if err != nil {
 		return nil, fmt.Errorf("error build storage_products request. %w", err)
 	}
+
+	storageId := chi.URLParam(r, "storage_id")
+
+	request.StorageId = storageId
 
 	log.Debug("request", slog.Any("dto", request))
 
@@ -125,19 +131,3 @@ func (s *Server) releaseProductReservation(ctx context.Context, r *http.Request)
 
 	return nil, nil
 }
-
-// func productId(ctx context.Context) (string, error) {
-// 	if id, ok := ctx.Value("product_id").(string); ok {
-// 		return id, nil
-// 	}
-
-// 	return "", fmt.Errorf("error product id not passed throuh context. %w", errs.ErrorInvalidRequestPath)
-// }
-
-// func storageId(ctx context.Context) (string, error) {
-// 	if id, ok := ctx.Value("storage_id").(string); ok {
-// 		return id, nil
-// 	}
-
-// 	return "", fmt.Errorf("error storage id not passed throuh context. %w", errs.ErrorInvalidRequestPath)
-// }

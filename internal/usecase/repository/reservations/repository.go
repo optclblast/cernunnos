@@ -46,6 +46,8 @@ type ReservationsParams struct {
 	ProductId  uuid.UUID
 	StorageId  uuid.UUID
 	ShippingId uuid.UUID
+	Limit      uint64
+	Offset     uint64
 }
 
 func (r *repositorySql) Reservations(
@@ -172,13 +174,11 @@ func buildSelectReservationsQuery(params ReservationsParams) sq.SelectBuilder {
 		"pd.reserved",
 	).
 		From("products_reservations as r").
-		InnerJoin("products as p", "p.id = r.product_id").
-		InnerJoin("storages as s", "s.id = r.storage_id").
+		InnerJoin("products as p on p.id = r.product_id").
+		InnerJoin("storages as s on s.id = r.storage_id").
 		InnerJoin(
-			"products_distribution as pd",
-			"pd.storage_id = r.storage_id",
-			"pd.product_id = r.product_id",
-		)
+			"products_distribution as pd on pd.storage_id = r.storage_id AND pd.product_id = r.product_id",
+		).PlaceholderFormat(sq.Dollar)
 
 	if params.ProductId != uuid.Nil {
 		query = query.Where(sq.Eq{
@@ -198,11 +198,23 @@ func buildSelectReservationsQuery(params ReservationsParams) sq.SelectBuilder {
 		})
 	}
 
+	if params.Limit > 0 && params.Limit < 500 {
+		query = query.Limit(params.Limit)
+	} else {
+		query = query.Limit(uint64(sqltools.DefaultLimit))
+	}
+
+	if params.Offset > 0 {
+		query = query.Offset(params.Offset)
+	}
+
+	fmt.Println(query.ToSql())
+
 	return query
 }
 
 type ReserveParams struct {
-	ProductId  uuid.UUID
+	ProductIds uuid.UUIDs
 	StorageId  uuid.UUID
 	ShippingId uuid.UUID
 	Amount     int64
@@ -210,20 +222,27 @@ type ReserveParams struct {
 
 func (r *repositorySql) Reserve(ctx context.Context, params ReserveParams) error {
 	err := sqltools.Transaction(ctx, r.db, func(ctx context.Context) error {
-		storagesToReserve, err := r.storagesToReserveIn(ctx, params.ProductId, params.Amount)
-		if err != nil {
-			return fmt.Errorf("error fetch storages to reserve product in. %w", err)
-		}
-
-		for storageId, availableSlots := range storagesToReserve {
-			err = r.reserve(ctx, reserveParams{
-				productId:  params.ProductId,
-				storageId:  storageId,
-				shippingId: params.ShippingId,
-				amount:     availableSlots,
+		for _, productId := range params.ProductIds {
+			storagesToReserve, err := r.storagesToReserveIn(ctx, storagesToReserveInParams{
+				productId: productId,
+				storageId: params.StorageId,
+				amount:    params.Amount,
 			})
 			if err != nil {
-				return fmt.Errorf("error reserve slots in %s. %w", storageId.String(), err)
+				return fmt.Errorf("error fetch storages to reserve product in. %w", err)
+			}
+
+			for storageId, availableSlots := range storagesToReserve {
+				fmt.Println(storageId.String())
+				err = r.reserve(ctx, reserveParams{
+					productId:  productId,
+					storageId:  storageId,
+					shippingId: params.ShippingId,
+					amount:     availableSlots,
+				})
+				if err != nil {
+					return fmt.Errorf("error reserve slots in %s. %w", storageId.String(), err)
+				}
 			}
 		}
 
@@ -247,8 +266,8 @@ func (r *repositorySql) reserve(ctx context.Context, params reserveParams) error
 	err := sqltools.Transaction(ctx, r.db, func(ctx context.Context) error {
 		updateQuery := sq.Update("products_distribution").
 			SetMap(sq.Eq{
-				"reserved":  params.amount,
-				"available": sq.Expr("available - $1", params.amount),
+				"reserved":  sq.Expr("reserved + ?", params.amount),
+				"available": sq.Expr("available - ?", params.amount),
 			}).
 			Where(sq.Eq{
 				"storage_id": params.storageId,
@@ -266,10 +285,8 @@ func (r *repositorySql) reserve(ctx context.Context, params reserveParams) error
 		}
 
 		now := time.Now()
-		id := uuid.New()
 
 		insertQuery := sq.Insert("products_reservations").Columns(
-			"id",
 			"storage_id",
 			"product_id",
 			"shipping_id",
@@ -277,7 +294,6 @@ func (r *repositorySql) reserve(ctx context.Context, params reserveParams) error
 			"created_at",
 			"updated_at",
 		).Values(
-			id,
 			params.storageId,
 			params.productId,
 			params.shippingId,
@@ -304,28 +320,41 @@ func (r *repositorySql) reserve(ctx context.Context, params reserveParams) error
 	return nil
 }
 
+type storagesToReserveInParams struct {
+	productId uuid.UUID
+	storageId uuid.UUID
+	amount    int64
+}
+
 func (r *repositorySql) storagesToReserveIn(
 	ctx context.Context,
-	productId uuid.UUID,
-	amount int64,
+	params storagesToReserveInParams,
 ) (map[uuid.UUID]int64, error) {
-	uuids := make(map[uuid.UUID]int64, 1)
+	uuids := make(map[uuid.UUID]int64)
 	err := sqltools.Transaction(ctx, r.db, func(ctx context.Context) error {
 		isSpaceAvailableQuery := sq.Select(
 			"storage_id",
 			"available",
 		).
 			From("products_distribution").
-			Where(
+			Where(sq.And{
 				sq.Eq{
-					"product_id": productId,
+					"product_id": params.productId,
 				},
 				sq.Gt{
 					"available": 0,
 				},
+			},
 			).OrderBy("available DESC").
-			Suffix("for updated").
+			Suffix("for update").
 			PlaceholderFormat(sq.Dollar)
+
+		if params.storageId != uuid.Nil {
+			fmt.Println(params.storageId.String())
+			isSpaceAvailableQuery = isSpaceAvailableQuery.Where(sq.Eq{
+				"storage_id": params.storageId,
+			})
+		}
 
 		rows, err := isSpaceAvailableQuery.RunWith(r.Conn(ctx)).QueryContext(ctx)
 		if err != nil {
@@ -337,25 +366,32 @@ func (r *repositorySql) storagesToReserveIn(
 			}
 		}()
 
-		var availableTotal int64
+		fmt.Println(isSpaceAvailableQuery.ToSql())
+		fmt.Println(params.productId.String())
+
+		var left int64 = params.amount
 
 		for rows.Next() {
-			var storageId uuid.UUID
+			var storageId uuid.UUID = uuid.Nil
 			var available int64
 
 			if err := rows.Scan(&storageId, &available); err != nil {
 				return fmt.Errorf("error scan row. %w", err)
 			}
+			fmt.Println(storageId.String())
 
-			availableTotal += available
-
-			if availableTotal >= amount {
-				uuids[storageId] = amount
-				return nil
+			if available >= left {
+				uuids[storageId] = left
+				return err
 			} else {
-				uuids[storageId] = amount - availableTotal
+				left = left - available
+				uuids[storageId] = available
 			}
 
+		}
+
+		if left > 0 {
+			return fmt.Errorf("error all storages are busy. %w", ErrorNotEnoughSpace)
 		}
 
 		return err
@@ -368,33 +404,35 @@ func (r *repositorySql) storagesToReserveIn(
 }
 
 type CancelParams struct {
-	ProductId  uuid.UUID
+	ProductIds uuid.UUIDs
 	StorageId  uuid.UUID
 	ShippingId uuid.UUID
 }
 
 func (r *repositorySql) Cancel(ctx context.Context, params CancelParams) error {
 	err := sqltools.Transaction(ctx, r.db, func(ctx context.Context) error {
-		reservations, err := r.reservedByStorage(ctx, reservedByStorageParams{
-			storageId:  params.StorageId,
-			shippingId: params.ShippingId,
-			productId:  params.ProductId,
-		})
-		if err != nil {
-			return fmt.Errorf("error fetch reservations in storages. %w", err)
-		}
-
-		for storage, reserved := range reservations {
-			err = r.freeReservation(ctx, cancelReservationParams{
-				storageId:  storage,
+		for _, productId := range params.ProductIds {
+			reservations, err := r.reservedByStorage(ctx, reservedByStorageParams{
+				storageId:  params.StorageId,
 				shippingId: params.ShippingId,
-				productId:  params.ProductId,
-				amount:     reserved,
+				productId:  productId,
 			})
 			if err != nil {
-				return fmt.Errorf(
-					"error cancel product reservation at %s. %w", storage.String(), err,
-				)
+				return fmt.Errorf("error fetch reservations in storages. %w", err)
+			}
+
+			for storage, reserved := range reservations {
+				err = r.freeReservation(ctx, cancelReservationParams{
+					storageId:  storage,
+					shippingId: params.ShippingId,
+					productId:  productId,
+					amount:     reserved,
+				})
+				if err != nil {
+					return fmt.Errorf(
+						"error cancel product reservation at %s. %w", storage.String(), err,
+					)
+				}
 			}
 		}
 
@@ -408,34 +446,36 @@ func (r *repositorySql) Cancel(ctx context.Context, params CancelParams) error {
 }
 
 type ReleaseParams struct {
-	ProductId  uuid.UUID
+	ProductIds uuid.UUIDs
 	StorageId  uuid.UUID
 	ShippingId uuid.UUID
 }
 
 func (r *repositorySql) Release(ctx context.Context, params ReleaseParams) error {
 	err := sqltools.Transaction(ctx, r.db, func(ctx context.Context) error {
-		reservations, err := r.reservedByStorage(ctx, reservedByStorageParams{
-			storageId:  params.StorageId,
-			shippingId: params.ShippingId,
-			productId:  params.ProductId,
-		})
-		if err != nil {
-			return fmt.Errorf("error fetch reservations in storages. %w", err)
-		}
-
-		for storage, reserved := range reservations {
-			err = r.freeReservation(ctx, cancelReservationParams{
-				storageId:  storage,
+		for _, productId := range params.ProductIds {
+			reservations, err := r.reservedByStorage(ctx, reservedByStorageParams{
+				storageId:  params.StorageId,
 				shippingId: params.ShippingId,
-				productId:  params.ProductId,
-				amount:     reserved,
-				writeOff:   true,
+				productId:  productId,
 			})
 			if err != nil {
-				return fmt.Errorf(
-					"error release product reservation at %s. %w", storage.String(), err,
-				)
+				return fmt.Errorf("error fetch reservations in storages. %w", err)
+			}
+
+			for storage, reserved := range reservations {
+				err = r.freeReservation(ctx, cancelReservationParams{
+					storageId:  storage,
+					shippingId: params.ShippingId,
+					productId:  productId,
+					amount:     reserved,
+					writeOff:   true,
+				})
+				if err != nil {
+					return fmt.Errorf(
+						"error release product reservation at %s. %w", storage.String(), err,
+					)
+				}
 			}
 		}
 
@@ -476,6 +516,8 @@ func (r *repositorySql) reservedByStorage(
 			})
 		}
 
+		fmt.Println(selectReservations.ToSql())
+
 		rows, err := selectReservations.RunWith(r.Conn(ctx)).QueryContext(ctx)
 		if err != nil {
 			return fmt.Errorf("error fetch reservations from database. %w", err)
@@ -485,8 +527,6 @@ func (r *repositorySql) reservedByStorage(
 				err = errors.Join(fmt.Errorf("error close rows. %w", closeErr), err)
 			}
 		}()
-
-		reservations := make(map[uuid.UUID]int64)
 
 		for rows.Next() {
 			var storageId uuid.UUID
@@ -519,19 +559,30 @@ type cancelReservationParams struct {
 func (r *repositorySql) freeReservation(ctx context.Context, params cancelReservationParams) error {
 	err := sqltools.Transaction(ctx, r.db, func(ctx context.Context) error {
 		query := sq.Update("products_distribution").SetMap(sq.Eq{
-			"reserved": sq.Expr("reserved - $1", params.amount),
+			"reserved": sq.Expr("reserved - ?", params.amount),
 		}).Where(sq.Eq{
-			"product_id":  params.productId,
-			"shipping_id": params.shippingId,
-			"storage_id":  params.storageId,
+			"product_id": params.productId,
+			"storage_id": params.storageId,
 		}).PlaceholderFormat(sq.Dollar)
 
 		if !params.writeOff {
-			query = query.Set("amount", sq.Expr("amount - $2", params.amount))
+			query = query.Set("available", sq.Expr("available + ?", params.amount))
+		} else {
+			query = query.Set("amount", sq.Expr("amount - ?", params.amount))
 		}
 
 		if _, err := query.RunWith(r.Conn(ctx)).ExecContext(ctx); err != nil {
 			return fmt.Errorf("error update amount of an available items. %w", err)
+		}
+
+		delete := sq.Delete("products_reservations").
+			Where(sq.Eq{
+				"product_id":  params.productId,
+				"shipping_id": params.shippingId,
+				"storage_id":  params.storageId,
+			}).PlaceholderFormat(sq.Dollar)
+		if _, err := delete.RunWith(r.Conn(ctx)).ExecContext(ctx); err != nil {
+			return fmt.Errorf("error delete reservation. %w", err)
 		}
 
 		return nil

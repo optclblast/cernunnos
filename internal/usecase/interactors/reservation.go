@@ -43,22 +43,31 @@ type ReservationsParams struct {
 	StorageId  string // If StorageId is passed, then reservation will be performed in a storage specified WITHOUT
 	ProductId  string
 	ShippingId string
+	Limit      uint64
+	Offset     uint64
 }
 
 func (c *reservationInteractor) Reservations(
 	ctx context.Context,
 	params ReservationsParams,
 ) ([]*models.Reservation, error) {
-	ids, err := processIds(params.ProductId, params.StorageId, params.ShippingId)
+	ids, err := processIds([]string{params.ProductId}, params.StorageId, params.ShippingId)
 	if err != nil {
 		return nil, fmt.Errorf("error parse ids. %w", err)
 	}
 
-	reservations, err := c.reservationsRepository.Reservations(ctx, reservationsRepo.ReservationsParams{
+	reservationsParams := reservationsRepo.ReservationsParams{
 		StorageId:  ids.storageId,
-		ProductId:  ids.productId,
 		ShippingId: ids.shippingId,
-	})
+		Limit:      params.Limit,
+		Offset:     params.Offset,
+	}
+
+	if len(ids.productIds) > 0 {
+		reservationsParams.ProductId = ids.productIds[0]
+	}
+
+	reservations, err := c.reservationsRepository.Reservations(ctx, reservationsParams)
 	if err != nil {
 		return nil, fmt.Errorf("error fetch reservations from repository. %w", err)
 	}
@@ -67,20 +76,20 @@ func (c *reservationInteractor) Reservations(
 }
 
 type ReserveParams struct {
-	ProductId  string
+	ProductIds []string
 	StorageId  string
 	ShippingId string
 	Amount     int64
 }
 
 func (c *reservationInteractor) Reserve(ctx context.Context, params ReserveParams) error {
-	ids, err := processIds(params.ProductId, params.StorageId, params.ShippingId)
+	ids, err := processIds(params.ProductIds, params.StorageId, params.ShippingId)
 	if err != nil {
 		return fmt.Errorf("error parse ids. %w", err)
 	}
 
 	err = c.reservationsRepository.Reserve(ctx, reservationsRepo.ReserveParams{
-		ProductId:  ids.productId,
+		ProductIds: ids.productIds,
 		StorageId:  ids.storageId,
 		ShippingId: ids.shippingId,
 		Amount:     params.Amount,
@@ -93,19 +102,19 @@ func (c *reservationInteractor) Reserve(ctx context.Context, params ReserveParam
 }
 
 type CancelParams struct {
-	ProductId  string
+	ProductIds []string
 	StorageId  string // If StorageId is passed, then cancellation will be performed in a storage specified only.
 	ShippingId string
 }
 
 func (c *reservationInteractor) Cancel(ctx context.Context, params CancelParams) error {
-	ids, err := processIds(params.ProductId, params.StorageId, params.ShippingId)
+	ids, err := processIds(params.ProductIds, params.StorageId, params.ShippingId)
 	if err != nil {
 		return fmt.Errorf("error parse ids. %w", err)
 	}
 
 	err = c.reservationsRepository.Cancel(ctx, reservationsRepo.CancelParams{
-		ProductId:  ids.productId,
+		ProductIds: ids.productIds,
 		ShippingId: ids.shippingId,
 		StorageId:  ids.storageId,
 	})
@@ -117,19 +126,19 @@ func (c *reservationInteractor) Cancel(ctx context.Context, params CancelParams)
 }
 
 type ReleaseParams struct {
-	ProductId  string
+	ProductIds []string
 	StorageId  string // If StorageId is passed, then reservation relese will be performed in a storage specified only.
 	ShippingId string
 }
 
 func (c *reservationInteractor) Release(ctx context.Context, params ReleaseParams) error {
-	ids, err := processIds(params.ProductId, params.StorageId, params.ShippingId)
+	ids, err := processIds(params.ProductIds, params.StorageId, params.ShippingId)
 	if err != nil {
 		return fmt.Errorf("error parse ids. %w", err)
 	}
 
 	err = c.reservationsRepository.Release(ctx, reservationsRepo.ReleaseParams{
-		ProductId:  ids.productId,
+		ProductIds: ids.productIds,
 		ShippingId: ids.shippingId,
 		StorageId:  ids.storageId,
 	})
@@ -142,19 +151,19 @@ func (c *reservationInteractor) Release(ctx context.Context, params ReleaseParam
 
 type reservationsIds struct {
 	storageId  uuid.UUID
-	productId  uuid.UUID
+	productIds uuid.UUIDs
 	shippingId uuid.UUID
 }
 
 func processIds(
-	productIdString string,
+	productIdsString []string,
 	storageIdString string,
 	shippingIdString string,
 ) (*reservationsIds, error) {
 	var (
 		err        error
 		storageId  uuid.UUID
-		productId  uuid.UUID
+		productIds uuid.UUIDs = make(uuid.UUIDs, 0, len(productIdsString))
 		shippingId uuid.UUID
 	)
 
@@ -165,10 +174,14 @@ func processIds(
 		}
 	}
 
-	if productIdString != "" {
-		productId, err = uuid.Parse(productIdString)
-		if err != nil {
-			return nil, fmt.Errorf("error parse product id. %w", err)
+	if len(productIdsString) > 0 {
+		for _, id := range productIdsString {
+			productId, err := uuid.Parse(id)
+			if err != nil {
+				return nil, fmt.Errorf("error parse product id. %w", err)
+			}
+
+			productIds = append(productIds, productId)
 		}
 	}
 
@@ -181,7 +194,7 @@ func processIds(
 
 	return &reservationsIds{
 		storageId:  storageId,
-		productId:  productId,
+		productIds: productIds,
 		shippingId: shippingId,
 	}, nil
 }

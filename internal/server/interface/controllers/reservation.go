@@ -46,9 +46,11 @@ func (c *reservationController) Reservations(
 	req *dto.ReservationsRequest,
 ) ([]byte, error) {
 	reservations, err := c.interactor.Reservations(ctx, interactors.ReservationsParams{
-		StorageId:  req.ShippingId,
+		StorageId:  req.StorageId,
 		ProductId:  req.ProductId,
 		ShippingId: req.ShippingId,
+		Limit:      uint64(req.Limit),
+		Offset:     uint64(req.Offset),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("error fetch reservations. %w", err)
@@ -64,7 +66,7 @@ func (c *reservationController) Reservations(
 
 func (c *reservationController) Reserve(ctx context.Context, req *dto.ReserveRequest) error {
 	err := c.interactor.Reserve(ctx, interactors.ReserveParams{
-		ProductId:  req.ProductId,
+		ProductIds: req.Products,
 		StorageId:  req.StorageId,
 		ShippingId: req.ShippingId,
 		Amount:     req.Amount,
@@ -78,7 +80,7 @@ func (c *reservationController) Reserve(ctx context.Context, req *dto.ReserveReq
 
 func (c *reservationController) Cancel(ctx context.Context, req *dto.CancelRequest) error {
 	err := c.interactor.Cancel(ctx, interactors.CancelParams{
-		ProductId:  req.ProductId,
+		ProductIds: req.Products,
 		ShippingId: req.ShippingId,
 		StorageId:  req.StorageId,
 	})
@@ -91,7 +93,7 @@ func (c *reservationController) Cancel(ctx context.Context, req *dto.CancelReque
 
 func (c *reservationController) Release(ctx context.Context, req *dto.ReleaseRequest) error {
 	err := c.interactor.Release(ctx, interactors.ReleaseParams{
-		ProductId:  req.ProductId,
+		ProductIds: req.Products,
 		ShippingId: req.ShippingId,
 		StorageId:  req.StorageId,
 	})

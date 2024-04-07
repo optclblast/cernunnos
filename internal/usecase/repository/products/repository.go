@@ -156,6 +156,14 @@ func (r *repositorySql) StorageProducts(
 	ctx context.Context,
 	params StorageProductsParams,
 ) ([]*models.StorageProduct, error) {
+	err := sqltools.Transaction(ctx, r.db, func(ctx context.Context) error {
+
+		return nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("error execute transactional operation. %w", err)
+	}
+
 	return nil, nil
 }
 

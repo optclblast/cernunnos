@@ -20,7 +20,7 @@ import (
 
 	chimw "github.com/go-chi/chi/v5/middleware"
 
-	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/v5"
 )
 
 type Server struct {
@@ -78,7 +78,7 @@ func (s *Server) initializeRouter() {
 	})
 
 	router.Route("/products", func(r chi.Router) {
-		r.Get("/", s.handle(s.reserveProduct, "reserve_product")) // todo list products available on a spicific storage
+		r.Get("/", s.handle(s.products, "products"))
 	})
 
 	router.Route("/reservations", func(r chi.Router) {
@@ -91,7 +91,7 @@ func (s *Server) initializeRouter() {
 	s.Mux = router
 }
 
-const requestTimeout time.Duration = 10 * time.Second
+const requestTimeout time.Duration = 1000000 * time.Second
 
 type handlerFunc func(ctx context.Context, r *http.Request) ([]byte, error)
 

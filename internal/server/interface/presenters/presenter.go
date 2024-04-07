@@ -26,6 +26,7 @@ func (p *productPresenter) ResponseStorageProducts(products []*models.StoragePro
 
 	response := &dto.StorageProductsResponse{
 		Products: dtoProducts,
+		Offset:   uint32(len(dtoProducts)),
 	}
 
 	rawResponse, err := json.Marshal(&response)
@@ -44,6 +45,7 @@ func (p *productPresenter) ResponseProducts(products []*models.ProductInfo) ([]b
 
 	response := &dto.ProductsResponse{
 		Products: pInfos,
+		Offset:   uint32(len(pInfos)),
 	}
 
 	rawResponse, err := json.Marshal(&response)

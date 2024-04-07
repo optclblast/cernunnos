@@ -52,7 +52,7 @@ type ProductInfo struct {
 type ProductsRequest struct {
 	Ids              []string `json:"ids,omitempty"`
 	StorageId        string   `json:"storage_id,omitempty"`
-	WithDestribution bool     `json:"with_distribution,omitempty"` // Include product destribution info into response
+	WithDistribution bool     `json:"with_distribution,omitempty"` // Include product destribution info into response
 	WithUnavailable  bool     `json:"with_unavailable,omitempty"`  // Fetch with unavailable products
 	Limit            uint32   `json:"limit"`                       // Amount of items to fetch. Default and max 500
 	Offset           uint32   `json:"offset"`                      // Pagination
@@ -92,26 +92,26 @@ type ReservationsResponse struct {
 }
 
 type ReserveRequest struct {
-	StorageId  string `json:"storage_id,omitempty"`
-	ProductId  string `json:"product_id,omitempty"`
-	ShippingId string `json:"shipping_id,omitempty"`
-	Amount     int64  `json:"amount"`
+	StorageId  string   `json:"storage_id,omitempty"`
+	Products   []string `json:"products,omitempty"`
+	ShippingId string   `json:"shipping_id,omitempty"`
+	Amount     int64    `json:"amount"`
 }
 
 type ReserveResponse struct{}
 
 type ReleaseRequest struct {
-	StorageId  string `json:"storage_id,omitempty"`
-	ProductId  string `json:"product_id,omitempty"`
-	ShippingId string `json:"shipping_id,omitempty"`
+	StorageId  string   `json:"storage_id,omitempty"`
+	Products   []string `json:"products,omitempty"`
+	ShippingId string   `json:"shipping_id,omitempty"`
 }
 
 type ReleaseResponse struct{}
 
 type CancelRequest struct {
-	StorageId  string `json:"storage_id,omitempty"`
-	ProductId  string `json:"product_id,omitempty"`
-	ShippingId string `json:"shipping_id,omitempty"`
+	StorageId  string   `json:"storage_id,omitempty"`
+	Products   []string `json:"products,omitempty"`
+	ShippingId string   `json:"shipping_id,omitempty"`
 }
 
 type CancelResponse struct{}

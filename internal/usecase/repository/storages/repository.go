@@ -26,10 +26,6 @@ type StoragesParams struct {
 type Repository interface {
 	// Fetch storages by filter
 	Storages(ctx context.Context, params StoragesParams) ([]*models.Storage, error)
-	// Create new storage
-	Add(ctx context.Context, storage *models.Storage) error
-	// Update storage
-	Update(ctx context.Context, storage *models.Storage) error
 }
 
 func NewRepository(db *sql.DB) Repository {
@@ -98,28 +94,6 @@ func (r *repositorySql) Storages(ctx context.Context, params StoragesParams) ([]
 	}
 
 	return storages, nil
-}
-
-func (r *repositorySql) Add(ctx context.Context, storage *models.Storage) error {
-	err := sqltools.Transaction(ctx, r.db, func(ctx context.Context) error {
-		return nil
-	})
-	if err != nil {
-		return fmt.Errorf("error execute transactional operation. %w", err)
-	}
-
-	return nil
-}
-
-func (r *repositorySql) Update(ctx context.Context, storage *models.Storage) error {
-	err := sqltools.Transaction(ctx, r.db, func(ctx context.Context) error {
-		return nil
-	})
-	if err != nil {
-		return fmt.Errorf("error execute transactional operation. %w", err)
-	}
-
-	return nil
 }
 
 func buildStoragesQuery(params StoragesParams) sq.SelectBuilder {

@@ -39,7 +39,7 @@ func (c *productController) Products(
 	products, err := c.interactor.Products(ctx, interactors.ProductsParams{
 		Ids:              req.Ids,
 		StorageId:        req.StorageId,
-		WithDestribution: req.WithDestribution,
+		WithDestribution: req.WithDistribution,
 		WithUnavailable:  req.WithUnavailable,
 		Limit:            req.Limit,
 		Offset:           req.Offset,
@@ -64,6 +64,8 @@ func (c *productController) StorageProducts(
 		Ids:             req.ProductsIds,
 		StorageId:       req.StorageId,
 		WithUnavailable: req.WithUnavailable,
+		Limit:           uint64(req.Limit),
+		Offset:          uint64(req.Offset),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("error fetch products. %w", err)

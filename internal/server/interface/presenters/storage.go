@@ -26,6 +26,7 @@ func (p *storagePresenter) ResponseStorages(storages []*models.Storage) ([]byte,
 
 	response := dto.StoragesResponse{
 		Storages: dtoStorages,
+		Offset:   uint32(len(dtoStorages)),
 	}
 
 	rawResponse, err := json.Marshal(&response)

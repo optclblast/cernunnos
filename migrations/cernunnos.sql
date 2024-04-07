@@ -40,7 +40,7 @@ create table if not exists products_reservations (
         updated_at timestamp default current_timestamp
 );
 
-create index if not exists index_products_reservations_storage_id_product_id_shipping_id
+create index if not exists index_products_reservations_product_id_shipping_id_storage_id
 on products_reservations (
         product_id, shipping_id, storage_id
 );
