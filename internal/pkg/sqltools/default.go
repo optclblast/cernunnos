@@ -1,3 +1,3 @@
 package sqltools
 
-const DefaultLimit uint64 = 500
+const DefaultLimit uint32 = 500

@@ -5,12 +5,27 @@
         "version": "0.2.0",
         "configurations": [
                 {
-                        "name": "Launch Package",
+                        "name": "up",
                         "type": "go",
                         "request": "launch",
                         "mode": "auto",
                         "program": "${workspaceFolder}/cmd/main.go",
                         "args": [
+                                "-log-level=debug",
+                                "-address=localhost:8080",
+                                "-db-host=localhost:5432",
+                                "-db-user=cernunnos",
+                                "-db-password=cernunnos"
+                        ]
+                },
+                {
+                        "name": "fill-db",
+                        "type": "go",
+                        "request": "launch",
+                        "mode": "auto",
+                        "program": "${workspaceFolder}/cmd/main.go",
+                        "args": [
+                                "fill-db",
                                 "-log-level=debug",
                                 "-address=localhost:8080",
                                 "-db-host=localhost:5432",

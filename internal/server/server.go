@@ -3,17 +3,22 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"cernunnos/internal/middleware"
 	"cernunnos/internal/pkg/config"
 	errs "cernunnos/internal/pkg/errors"
 	"cernunnos/internal/pkg/logger"
 	"cernunnos/internal/server/interface/controllers"
-	productsRepo "cernunnos/internal/usecase/repository/products"
-	storagesRepo "cernunnos/internal/usecase/repository/storages"
+
+	"github.com/go-chi/render"
+
+	chimw "github.com/go-chi/chi/v5/middleware"
 
 	"github.com/go-chi/chi"
 )
@@ -21,28 +26,22 @@ import (
 type Server struct {
 	*chi.Mux
 
-	address            string
-	log                *slog.Logger
-	errorsHandler      errs.ErrorHandler
-	storagesRepository storagesRepo.Repository
-	productsRepository productsRepo.Repository
-	controllers        *controllers.RootController
+	address       string
+	log           *slog.Logger
+	errorsHandler errs.ErrorHandler
+	controllers   *controllers.RootController
 }
 
 func newServer(
 	cfg *config.Config,
 	log *slog.Logger,
-	storagesRepository storagesRepo.Repository,
-	productsRepository productsRepo.Repository,
 	rootController *controllers.RootController,
 ) *Server {
 	s := &Server{
-		address:            cfg.Address,
-		log:                log,
-		errorsHandler:      errs.NewErrorHandler(),
-		storagesRepository: storagesRepository,
-		productsRepository: productsRepository,
-		controllers:        rootController,
+		address:       cfg.Address,
+		log:           log,
+		errorsHandler: errs.NewErrorHandler(),
+		controllers:   rootController,
 	}
 
 	s.initializeRouter()
@@ -65,40 +64,52 @@ func (s *Server) initializeRouter() {
 	middlewareBuilder := middleware.NewMiddlewareBuilder(s.log.WithGroup("middleware"))
 
 	router.Use(middlewareBuilder.Recovery)
+	router.Use(chimw.RequestID)
+	router.Use(render.SetContentType(render.ContentTypeJSON))
 
 	router.Route("/storages", func(r chi.Router) {
-		r.Get("/", s.storages())
+		r.Get("/", s.handle(s.storages, "storages"))
 		r.Route("/{storage_id}/products", func(r chi.Router) {
-			r.Get("/", s.storageProducts())
-			r.Post("/", nil) // todo add a new product (-s)
-			//r.Put("/{product_id}", nil)                // todo edit product info on a storage
-			r.Delete("/{product_id}", nil)             // todo remove product from storage
-			r.Post("/{product_id}/reservation", nil)   // todo reserve product
-			r.Put("/{product_id}/reservation", nil)    // todo update reservation
-			r.Delete("/{product_id}/reservation", nil) // todo delete reservation
+			r.Get("/", s.handle(s.storageProducts, "storage_products"))
+			r.Post("/", nil)               // todo add a new product (-s)
+			r.Put("/{product_id}", nil)    // todo edit product info on a storage
+			r.Delete("/{product_id}", nil) // todo remove product from storage
 		})
 	})
 
 	router.Route("/products", func(r chi.Router) {
-		r.Get("/", s.products())             // todo list products available on a spicific storage
-		r.Post("/new", nil)                  // todo add product
-		r.Put("/{product_id}/edit", nil)     // todo update product info
-		r.Post("/{product_id}/reserve", nil) // todo add reservation
+		r.Get("/", s.handle(s.reserveProduct, "reserve_product")) // todo list products available on a spicific storage
 	})
 
 	router.Route("/reservations", func(r chi.Router) {
-		r.Get("/", s.reservations())
-		r.Post("/reserve", s.reserve())
-		r.Delete("/cancel", s.cancelReservation())
-		r.Delete("/release", s.releaseReservation())
-	})
-
-	router.Route("/shippings", func(r chi.Router) {
-		r.Post("/{shipping_id}/confirm", nil)
-		r.Post("/{shipping_id}/cancel", nil)
+		r.Get("/", s.handle(s.reservations, "reservations"))
+		r.Post("/new", s.handle(s.reserveProduct, "reserve_product"))
+		r.Delete("/cancel", s.handle(s.cancelProductReservation, "cancel_reservation"))
+		r.Delete("/release", s.handle(s.releaseProductReservation, "release_reservation"))
 	})
 
 	s.Mux = router
+}
+
+const requestTimeout time.Duration = 10 * time.Second
+
+type handlerFunc func(ctx context.Context, r *http.Request) ([]byte, error)
+
+func (s *Server) handle(h handlerFunc, mathodName string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx, cancel := context.WithTimeout(r.Context(), requestTimeout)
+		defer cancel()
+
+		resp, err := h(ctx, r)
+		if err != nil {
+			s.responseError(ctx, w, err, mathodName)
+
+			return
+		}
+
+		s.response(ctx, w, http.StatusOK, resp)
+	}
+
 }
 
 func (s *Server) responseError(
@@ -138,4 +149,27 @@ func (s *Server) response(
 	if _, err := w.Write(response); err != nil {
 		s.log.Error("error write response", logger.Err(err))
 	}
+}
+
+func buildRequest[R any](r *http.Request) (*R, error) {
+	rawBody, err := io.ReadAll(r.Body)
+	if err != nil {
+		return nil, errors.Join(fmt.Errorf("error read request body. %w", err), errs.ErrorBadRequest)
+	}
+
+	defer func() {
+		if closeErr := r.Body.Close(); closeErr != nil {
+			err = errors.Join(fmt.Errorf("error close request body. %w", closeErr), err)
+		}
+	}()
+
+	var request R
+	if err = json.Unmarshal(rawBody, &request); err != nil {
+		return nil, errors.Join(
+			fmt.Errorf("error unmarshal request body. %w", err),
+			errs.ErrorBadRequest,
+		)
+	}
+
+	return &request, nil
 }

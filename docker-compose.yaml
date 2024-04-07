@@ -7,15 +7,15 @@ volumes:
   cernunnos-data: {}
 
 services:
-  cernunnos:
-    build: .
-    ports:
-      - 8080:8080
-    networks:
-      - net
-    depends_on:
-      database:
-        condition: service_started
+  # cernunnos:
+  #   build: .
+  #   ports:
+  #     - 8080:8080
+  #   networks:
+  #     - net
+  #   depends_on:
+  #     cernunnos-db:
+  #       condition: service_started
 
   cernunnos-db:
     image: postgres:16

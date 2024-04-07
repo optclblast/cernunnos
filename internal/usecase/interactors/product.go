@@ -1,10 +1,9 @@
-package product
+package interactors
 
 import (
 	"cernunnos/internal/pkg/dto"
 	"cernunnos/internal/pkg/models"
 	productsRepo "cernunnos/internal/usecase/repository/products"
-	storagesRepo "cernunnos/internal/usecase/repository/storages"
 	"context"
 	"fmt"
 	"log/slog"
@@ -19,18 +18,15 @@ type ProductInteractor interface {
 
 type productInteractor struct {
 	log                *slog.Logger
-	storagesRepository storagesRepo.Repository
 	productsRepository productsRepo.Repository
 }
 
 func NewProductInteractor(
 	log *slog.Logger,
-	storagesRepository storagesRepo.Repository,
 	productsRepository productsRepo.Repository,
 ) ProductInteractor {
 	return &productInteractor{
 		log:                log.WithGroup("product_interactor"),
-		storagesRepository: storagesRepository,
 		productsRepository: productsRepository,
 	}
 }
@@ -40,8 +36,8 @@ type ProductsParams struct {
 	StorageId        string
 	WithDestribution bool
 	WithUnavailable  bool
-	Limit            uint64
-	Offset           uint64
+	Limit            uint32
+	Offset           uint32
 }
 
 func (c *productInteractor) Products(

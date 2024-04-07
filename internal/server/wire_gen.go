@@ -10,9 +10,8 @@ import (
 	"cernunnos/internal/pkg/config"
 	"cernunnos/internal/pkg/logger"
 	"cernunnos/internal/server/interface/controllers"
-	"cernunnos/internal/server/interface/controllers/product"
-	"cernunnos/internal/server/interface/controllers/reservation"
-	"cernunnos/internal/server/interface/controllers/storage"
+	"cernunnos/internal/server/interface/presenters"
+	"cernunnos/internal/usecase/interactors"
 	"cernunnos/internal/usecase/repository"
 	"cernunnos/internal/usecase/repository/products"
 	"cernunnos/internal/usecase/repository/reservations"
@@ -25,18 +24,24 @@ import (
 
 func ProvideServer(c *config.Config) (*Server, func(), error) {
 	logger := provideLogger(c)
+	productPresenter := presenters.NewProductPresenter()
 	db, cleanup, err := repository.ProvideDatabaseConnection(c)
 	if err != nil {
 		return nil, nil, err
 	}
-	repositoryRepository := provideStoragesRepository(db)
 	productsRepository := provideProductsRepository(db)
-	storageController := storage.NewStorageController(logger, repositoryRepository, productsRepository)
-	productController := product.NewProductController(logger, repositoryRepository, productsRepository)
+	productInteractor := interactors.NewProductInteractor(logger, productsRepository)
+	productController := controllers.NewProductController(logger, productPresenter, productInteractor)
 	reservationsRepository := provideReservationsRepository(db)
-	reservationController := reservation.NewReservationController(logger, reservationsRepository)
-	rootController := controllers.NewRootController(storageController, productController, reservationController)
-	server := newServer(c, logger, repositoryRepository, productsRepository, rootController)
+	reservationInteractor := interactors.NewReservationInteractor(logger, reservationsRepository)
+	reservationPresenter := presenters.NewReservationPresenter()
+	reservationController := controllers.NewReservationController(logger, reservationInteractor, reservationPresenter)
+	repositoryRepository := provideStoragesRepository(db)
+	storageInteractor := interactors.NewStorageInteractor(logger, repositoryRepository)
+	storagePresenter := presenters.NewStoragePresenter()
+	storageController := controllers.NewStorageController(logger, storageInteractor, storagePresenter)
+	rootController := controllers.NewRootController(productController, reservationController, storageController)
+	server := newServer(c, logger, rootController)
 	return server, func() {
 		cleanup()
 	}, nil

@@ -331,6 +331,11 @@ func (r *repositorySql) storagesToReserveIn(
 		if err != nil {
 			return fmt.Errorf("error fetch available storages from database. %w", err)
 		}
+		defer func() {
+			if closeErr := rows.Close(); closeErr != nil {
+				err = errors.Join(fmt.Errorf("error close rows. %w", closeErr), err)
+			}
+		}()
 
 		var availableTotal int64
 
@@ -362,43 +367,178 @@ func (r *repositorySql) storagesToReserveIn(
 	return uuids, nil
 }
 
-func (r *repositorySql) lockProductsDistribution(
-	ctx context.Context,
-	storageId uuid.UUID,
-	productId uuid.UUID,
-) error {
-	return sqltools.Transaction(ctx, r.db, func(ctx context.Context) error {
-		lockQuery := sq.Select("*").
-			From("products_distribution").
-			Where(sq.Eq{
-				"storage_id": storageId,
-				"product_id": productId,
-			}).Suffix("for update").PlaceholderFormat(sq.Dollar)
-
-		if _, err := lockQuery.RunWith(r.Conn(ctx)).ExecContext(ctx); err != nil {
-			return fmt.Errorf("error lock products_distribution rows for update. %w", err)
-		}
-
-		return nil
-	})
-}
-
 type CancelParams struct {
 	ProductId  uuid.UUID
-	StorageId  uuid.UUID // If StorageId is passed, then cancellation will be performed in a storage specified only.
+	StorageId  uuid.UUID
 	ShippingId uuid.UUID
 }
 
 func (r *repositorySql) Cancel(ctx context.Context, params CancelParams) error {
+	err := sqltools.Transaction(ctx, r.db, func(ctx context.Context) error {
+		reservations, err := r.reservedByStorage(ctx, reservedByStorageParams{
+			storageId:  params.StorageId,
+			shippingId: params.ShippingId,
+			productId:  params.ProductId,
+		})
+		if err != nil {
+			return fmt.Errorf("error fetch reservations in storages. %w", err)
+		}
+
+		for storage, reserved := range reservations {
+			err = r.freeReservation(ctx, cancelReservationParams{
+				storageId:  storage,
+				shippingId: params.ShippingId,
+				productId:  params.ProductId,
+				amount:     reserved,
+			})
+			if err != nil {
+				return fmt.Errorf(
+					"error cancel product reservation at %s. %w", storage.String(), err,
+				)
+			}
+		}
+
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("error execure transactional operation. %w", err)
+	}
+
 	return nil
 }
 
 type ReleaseParams struct {
 	ProductId  uuid.UUID
-	StorageId  uuid.UUID // If StorageId is passed, then reservation relese will be performed in a storage specified only.
+	StorageId  uuid.UUID
 	ShippingId uuid.UUID
 }
 
 func (r *repositorySql) Release(ctx context.Context, params ReleaseParams) error {
+	err := sqltools.Transaction(ctx, r.db, func(ctx context.Context) error {
+		reservations, err := r.reservedByStorage(ctx, reservedByStorageParams{
+			storageId:  params.StorageId,
+			shippingId: params.ShippingId,
+			productId:  params.ProductId,
+		})
+		if err != nil {
+			return fmt.Errorf("error fetch reservations in storages. %w", err)
+		}
+
+		for storage, reserved := range reservations {
+			err = r.freeReservation(ctx, cancelReservationParams{
+				storageId:  storage,
+				shippingId: params.ShippingId,
+				productId:  params.ProductId,
+				amount:     reserved,
+				writeOff:   true,
+			})
+			if err != nil {
+				return fmt.Errorf(
+					"error release product reservation at %s. %w", storage.String(), err,
+				)
+			}
+		}
+
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("error execure transactional operation. %w", err)
+	}
+
+	return nil
+}
+
+type reservedByStorageParams struct {
+	productId  uuid.UUID
+	storageId  uuid.UUID
+	shippingId uuid.UUID
+}
+
+func (r *repositorySql) reservedByStorage(
+	ctx context.Context,
+	params reservedByStorageParams,
+) (map[uuid.UUID]int64, error) {
+	reservations := make(map[uuid.UUID]int64)
+	err := sqltools.Transaction(ctx, r.db, func(ctx context.Context) error {
+		selectReservations := sq.Select(
+			"pr.storage_id",
+			"pr.reserved",
+		).
+			From("products_reservations as pr").
+			Where(sq.Eq{
+				"product_id":  params.productId,
+				"shipping_id": params.shippingId,
+			}).PlaceholderFormat(sq.Dollar)
+
+		if params.storageId != uuid.Nil {
+			selectReservations = selectReservations.Where(sq.Eq{
+				"storage_id": params.storageId,
+			})
+		}
+
+		rows, err := selectReservations.RunWith(r.Conn(ctx)).QueryContext(ctx)
+		if err != nil {
+			return fmt.Errorf("error fetch reservations from database. %w", err)
+		}
+		defer func() {
+			if closeErr := rows.Close(); closeErr != nil {
+				err = errors.Join(fmt.Errorf("error close rows. %w", closeErr), err)
+			}
+		}()
+
+		reservations := make(map[uuid.UUID]int64)
+
+		for rows.Next() {
+			var storageId uuid.UUID
+			var reserved int64
+
+			if err = rows.Scan(&storageId, &reserved); err != nil {
+				return fmt.Errorf("error scan row. %w", err)
+			}
+
+			reservations[storageId] = reserved
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("error execure transactional operation. %w", err)
+	}
+
+	return reservations, nil
+}
+
+type cancelReservationParams struct {
+	productId  uuid.UUID
+	storageId  uuid.UUID
+	shippingId uuid.UUID
+	amount     int64
+	writeOff   bool
+}
+
+func (r *repositorySql) freeReservation(ctx context.Context, params cancelReservationParams) error {
+	err := sqltools.Transaction(ctx, r.db, func(ctx context.Context) error {
+		query := sq.Update("products_distribution").SetMap(sq.Eq{
+			"reserved": sq.Expr("reserved - $1", params.amount),
+		}).Where(sq.Eq{
+			"product_id":  params.productId,
+			"shipping_id": params.shippingId,
+			"storage_id":  params.storageId,
+		}).PlaceholderFormat(sq.Dollar)
+
+		if !params.writeOff {
+			query = query.Set("amount", sq.Expr("amount - $2", params.amount))
+		}
+
+		if _, err := query.RunWith(r.Conn(ctx)).ExecContext(ctx); err != nil {
+			return fmt.Errorf("error update amount of an available items. %w", err)
+		}
+
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("error execure transactional operation. %w", err)
+	}
+
 	return nil
 }

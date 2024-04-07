@@ -17,8 +17,8 @@ type ProductsParams struct {
 	Ids             uuid.UUIDs
 	WithDetribution bool
 	WithUnavailable bool
-	Limit           uint64
-	Offset          uint64
+	Limit           uint32
+	Offset          uint32
 }
 
 type StorageProductsParams struct {
@@ -68,7 +68,7 @@ func (s *repositorySql) Conn(ctx context.Context) sqltools.DBTX {
 func (r *repositorySql) Products(ctx context.Context, params ProductsParams) ([]*models.ProductInfo, error) {
 	batchSize := sqltools.DefaultLimit
 	if len(params.Ids) > 0 {
-		batchSize = uint64(len(params.Ids))
+		batchSize = uint32(len(params.Ids))
 	}
 
 	products := make([]*models.ProductInfo, 0, batchSize)
@@ -85,13 +85,13 @@ func (r *repositorySql) Products(ctx context.Context, params ProductsParams) ([]
 		}
 
 		if params.Limit > 0 && params.Limit < sqltools.DefaultLimit {
-			selectQuery = selectQuery.Limit(params.Limit)
+			selectQuery = selectQuery.Limit(uint64(params.Limit))
 		} else {
-			selectQuery = selectQuery.Limit(sqltools.DefaultLimit)
+			selectQuery = selectQuery.Limit(uint64(sqltools.DefaultLimit))
 		}
 
 		if params.Offset > 0 {
-			selectQuery = selectQuery.Offset(params.Offset)
+			selectQuery = selectQuery.Offset(uint64(params.Offset))
 		}
 
 		rows, err := selectQuery.RunWith(r.Conn(ctx)).QueryContext(ctx)

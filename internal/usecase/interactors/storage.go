@@ -3,7 +3,6 @@ package interactors
 import (
 	"cernunnos/internal/pkg/dto"
 	"cernunnos/internal/pkg/models"
-	productsRepo "cernunnos/internal/usecase/repository/products"
 	storagesRepo "cernunnos/internal/usecase/repository/storages"
 	"context"
 	"fmt"
@@ -17,18 +16,15 @@ type StorageInteractor interface {
 type storageInteractor struct {
 	log                *slog.Logger
 	storagesRepository storagesRepo.Repository
-	productsRepository productsRepo.Repository
 }
 
 func NewStorageInteractor(
 	log *slog.Logger,
 	storagesRepository storagesRepo.Repository,
-	productsRepository productsRepo.Repository,
 ) StorageInteractor {
 	return &storageInteractor{
 		log:                log.WithGroup("storage_interactor"),
 		storagesRepository: storagesRepository,
-		productsRepository: productsRepository,
 	}
 }
 

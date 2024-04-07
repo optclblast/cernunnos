@@ -20,4 +20,6 @@ FROM scratch
 WORKDIR /app
 COPY --from=builder /app/cernunnos /app/cernunnos
 
+EXPOSE 8080
+
 CMD ["./cernunnos"]

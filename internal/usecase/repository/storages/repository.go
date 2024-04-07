@@ -125,11 +125,11 @@ func (r *repositorySql) Update(ctx context.Context, storage *models.Storage) err
 func buildStoragesQuery(params StoragesParams) sq.SelectBuilder {
 	selectQuery := sq.Select("id", "name", "availability", "created_at", "updated_at").
 		From("storages").
-		Limit(sqltools.DefaultLimit).
+		Limit(uint64(sqltools.DefaultLimit)).
 		Suffix("for update").
 		PlaceholderFormat(sq.Dollar)
 
-	if params.Limit != 0 && params.Limit < sqltools.DefaultLimit {
+	if params.Limit != 0 && params.Limit < uint64(sqltools.DefaultLimit) {
 		selectQuery = selectQuery.Limit(params.Limit)
 	}
 
@@ -156,10 +156,6 @@ func buildStoragesQuery(params StoragesParams) sq.SelectBuilder {
 			},
 		)
 	}
-
-	qry, args, _ := selectQuery.ToSql()
-
-	fmt.Println(qry + "\n" + fmt.Sprint(args))
 
 	return selectQuery
 }

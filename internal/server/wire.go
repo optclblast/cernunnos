@@ -7,9 +7,8 @@ import (
 	"cernunnos/internal/pkg/config"
 	"cernunnos/internal/pkg/logger"
 	"cernunnos/internal/server/interface/controllers"
-	prodController "cernunnos/internal/server/interface/controllers/product"
-	resController "cernunnos/internal/server/interface/controllers/reservation"
-	stController "cernunnos/internal/server/interface/controllers/storage"
+	"cernunnos/internal/server/interface/presenters"
+	"cernunnos/internal/usecase/interactors"
 	"cernunnos/internal/usecase/repository"
 	productsRepo "cernunnos/internal/usecase/repository/products"
 	reservationsRepo "cernunnos/internal/usecase/repository/reservations"
@@ -27,9 +26,18 @@ func ProvideServer(c *config.Config) (*Server, func(), error) {
 		provideProductsRepository,
 		provideReservationsRepository,
 		provideLogger,
-		prodController.NewProductController,
-		stController.NewStorageController,
-		resController.NewReservationController,
+
+		presenters.NewProductPresenter,
+		presenters.NewReservationPresenter,
+		presenters.NewStoragePresenter,
+
+		interactors.NewProductInteractor,
+		interactors.NewReservationInteractor,
+		interactors.NewStorageInteractor,
+
+		controllers.NewProductController,
+		controllers.NewStorageController,
+		controllers.NewReservationController,
 		controllers.NewRootController,
 		newServer,
 	)

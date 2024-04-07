@@ -1,19 +1,16 @@
 package dto
 
-type Request interface {
-	StoragesRequest | StorageProductsRequest | ProductsRequest | ReservationsRequest
-}
-
 type StoragesRequest struct {
 	Ids             []string `json:"ids,omitempty"`
 	WithBusy        bool     `json:"with_busy,omitempty"`
 	WithUnavailable bool     `json:"with_unavailable,omitempty"`
-	Limit           uint64   `json:"limit,omitempty"`
-	// todo pagination?
+	Limit           uint32   `json:"limit,omitempty"`
+	Offset          uint32   `json:"offset,omitempty"`
 }
 
 type StoragesResponse struct {
 	Storages []*Storage `json:"storages"`
+	Offset   uint32     `json:"offset"`
 }
 
 // Storage DTO object
@@ -29,10 +26,13 @@ type StorageProductsRequest struct {
 	StorageId       string   // Fetched from URL params
 	ProductsIds     []string `json:"products_ids,omitempty"`
 	WithUnavailable bool     `json:"with_unavailable,omitempty"`
+	Limit           uint32   `json:"limit,omitempty"`
+	Offset          uint32   `json:"offset,omitempty"`
 }
 
 type StorageProductsResponse struct {
 	Products []*StorageProduct `json:"products"`
+	Offset   uint32            `json:"offset"`
 }
 
 type StorageProduct struct {
@@ -54,12 +54,13 @@ type ProductsRequest struct {
 	StorageId        string   `json:"storage_id,omitempty"`
 	WithDestribution bool     `json:"with_distribution,omitempty"` // Include product destribution info into response
 	WithUnavailable  bool     `json:"with_unavailable,omitempty"`  // Fetch with unavailable products
-	Limit            uint64   `json:"limit"`                       // Amount of items to fetch. Default and max 500
-	Offset           uint64   `json:"offset"`                      // Pagination
+	Limit            uint32   `json:"limit"`                       // Amount of items to fetch. Default and max 500
+	Offset           uint32   `json:"offset"`                      // Pagination
 }
 
 type ProductsResponse struct {
 	Products []*ProductInfo `json:"products"`
+	Offset   uint32         `json:"offset"`
 }
 
 type ProductDestribution struct {
@@ -81,8 +82,36 @@ type ReservationsRequest struct {
 	StorageId  string `json:"storage_id,omitempty"`
 	ProductId  string `json:"product_id,omitempty"`
 	ShippingId string `json:"shipping_id,omitempty"`
+	Limit      uint32 `json:"limit,omitempty"`
+	Offset     uint32 `json:"offset,omitempty"`
 }
 
 type ReservationsResponse struct {
 	Reservations []*Reservation `json:"reservations"`
+	Offset       uint32         `json:"offset"`
 }
+
+type ReserveRequest struct {
+	StorageId  string `json:"storage_id,omitempty"`
+	ProductId  string `json:"product_id,omitempty"`
+	ShippingId string `json:"shipping_id,omitempty"`
+	Amount     int64  `json:"amount"`
+}
+
+type ReserveResponse struct{}
+
+type ReleaseRequest struct {
+	StorageId  string `json:"storage_id,omitempty"`
+	ProductId  string `json:"product_id,omitempty"`
+	ShippingId string `json:"shipping_id,omitempty"`
+}
+
+type ReleaseResponse struct{}
+
+type CancelRequest struct {
+	StorageId  string `json:"storage_id,omitempty"`
+	ProductId  string `json:"product_id,omitempty"`
+	ShippingId string `json:"shipping_id,omitempty"`
+}
+
+type CancelResponse struct{}

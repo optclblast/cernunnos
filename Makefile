@@ -11,3 +11,6 @@ tools:
 
 lint:
 	${TOOLS_BIN}/golangci-lint run --config ./.golangci.yaml  ./...
+
+filldb:
+	go run cmd/main.go fill-db -log-level=debug -address=localhost:8080 -db-host=localhost:5432 -db-user=cernunnos -db-password=cernunnos
