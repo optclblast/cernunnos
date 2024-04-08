@@ -3,11 +3,21 @@ PROJECT_BIN = ${PROJECT_DIR}/bin
 TOOLS_BIN = ${PROJECT_BIN}/tools
 
 build:
-	sudo docker buildx build . -t cernunnos:latest
+	sudo docker buildx build ./Dockerfile.tests -t cernunnos:latest
 
 up:
+	sudo docker network create --driver bridge --subnet=192.168.2.0/24 --attachable cernunnos-net;
 	sudo docker buildx build . -t cernunnos:latest
 	sudo docker compose up -d
+
+down:
+	sudo docker compose down
+	sudo docker network rm cernunnos-net
+
+netup: 
+	sudo docker network create --driver bridge --subnet=192.168.2.0/24 --attachable cernunnos-net;
+dropnet:
+	sudo docker network rm cernunnos-net
 
 tools:
 	@GOBIN=${TOOLS_BIN} go install github.com/google/wire/cmd/wire@latest
@@ -24,3 +34,6 @@ filldb:
 		-db-host=cernunnos-db:5432 \
 		-db-user=cernunnos \
 		-db-password=cernunnos
+
+test:
+	sudo docker exec -it cernunnos 'go' 'test' '-v' '/build/tests'

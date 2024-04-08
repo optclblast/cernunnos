@@ -1,6 +1,8 @@
 version: '3'
 networks:
-  net:
+  cernunnos-net:
+    external: true
+    name: cernunnos-net
     driver: bridge
 
 volumes:
@@ -15,7 +17,7 @@ services:
     expose: 
       - 8080
     networks:
-      - net
+      - cernunnos-net
     depends_on:
       cernunnos-db:
         condition: service_started
@@ -34,7 +36,7 @@ services:
     ports:
       - 5432:5432
     networks:
-      - net
+      - cernunnos-net
     healthcheck:
       test: [ "CMD", "-U", "cernunnos", "pg_isready" ]
       interval: 5s
