@@ -14,12 +14,6 @@ RUN go mod download
 COPY . .
 RUN go build -ldflags="-s -w" -o /app/cernunnos cmd/main.go
 
-
-FROM scratch
-
-WORKDIR /app
-COPY --from=builder /app/cernunnos /app/cernunnos
-
 EXPOSE 8080
 
-CMD ["./cernunnos"]
+CMD ["/app/cernunnos", "-log-level=debug", "-address=0.0.0.0:8080", "-db-host=cernunnos-db:5432", "-db-user=cernunnos", "-db-password=cernunnos"]

@@ -55,7 +55,6 @@ func (s *Server) products(ctx context.Context, r *http.Request) ([]byte, error) 
 	request, err := buildRequest[dto.ProductsRequest](r)
 	if err != nil {
 		return nil, fmt.Errorf("error build products request. %w", err)
-
 	}
 
 	log.Debug("request", slog.Any("dto", request))
@@ -76,7 +75,6 @@ func (s *Server) reservations(ctx context.Context, r *http.Request) ([]byte, err
 	request, err := buildRequest[dto.ReservationsRequest](r)
 	if err != nil {
 		return nil, fmt.Errorf("error build products request. %w", err)
-
 	}
 
 	log.Debug("request", slog.Any("dto", request))
@@ -87,7 +85,6 @@ func (s *Server) reservations(ctx context.Context, r *http.Request) ([]byte, err
 	}
 
 	return response, nil
-
 }
 
 func (s *Server) reserveProduct(ctx context.Context, r *http.Request) ([]byte, error) {
@@ -96,12 +93,12 @@ func (s *Server) reserveProduct(ctx context.Context, r *http.Request) ([]byte, e
 		return nil, fmt.Errorf("error build reserve request. %w", err)
 	}
 
-	err = s.controllers.ReservationController.Reserve(ctx, request)
+	response, err := s.controllers.ReservationController.Reserve(ctx, request)
 	if err != nil {
 		return nil, fmt.Errorf("error reserve product. %w", err)
 	}
 
-	return nil, nil
+	return response, nil
 }
 
 func (s *Server) cancelProductReservation(ctx context.Context, r *http.Request) ([]byte, error) {
@@ -110,12 +107,12 @@ func (s *Server) cancelProductReservation(ctx context.Context, r *http.Request) 
 		return nil, fmt.Errorf("error build reserve request. %w", err)
 	}
 
-	err = s.controllers.ReservationController.Cancel(ctx, request)
+	response, err := s.controllers.ReservationController.Cancel(ctx, request)
 	if err != nil {
 		return nil, fmt.Errorf("error cancel product reservation. %w", err)
 	}
 
-	return nil, nil
+	return response, nil
 }
 
 func (s *Server) releaseProductReservation(ctx context.Context, r *http.Request) ([]byte, error) {
@@ -124,10 +121,10 @@ func (s *Server) releaseProductReservation(ctx context.Context, r *http.Request)
 		return nil, fmt.Errorf("error build reserve request. %w", err)
 	}
 
-	err = s.controllers.ReservationController.Release(ctx, request)
+	response, err := s.controllers.ReservationController.Release(ctx, request)
 	if err != nil {
 		return nil, fmt.Errorf("error release product reservation. %w", err)
 	}
 
-	return nil, nil
+	return response, nil
 }

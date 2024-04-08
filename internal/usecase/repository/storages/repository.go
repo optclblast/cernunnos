@@ -87,6 +87,10 @@ func (r *repositorySql) Storages(ctx context.Context, params StoragesParams) ([]
 			})
 		}
 
+		if err = rows.Err(); err != nil {
+			return fmt.Errorf("error process rows. %w", err)
+		}
+
 		return nil
 	})
 	if err != nil {

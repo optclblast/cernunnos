@@ -12,15 +12,16 @@ import (
 type ReservationController interface {
 	// List product reservations
 	Reservations(ctx context.Context, req *dto.ReservationsRequest) ([]byte, error)
-	// Reserves a product. If StorageId is passed, then reservation will be performed in a storage specified WITHOUT
-	// reservation distributing
-	Reserve(ctx context.Context, req *dto.ReserveRequest) error
-	// Cancels product reservation. If StorageId is passed, then cancellation will be performed in a storage specified only.
-	// Reserved products will be available for reservation again.
-	Cancel(ctx context.Context, req *dto.CancelRequest) error
-	// Releases the reservation. If StorageId is passed, then reservation relese will be performed in a storage specified only.
-	// Reserved products will be written off from stock.
-	Release(ctx context.Context, req *dto.ReleaseRequest) error
+	// Reserves a product. If StorageId is passed, then reservation will be performed in a
+	// storage specified WITHOUT reservation distributing
+	Reserve(ctx context.Context, req *dto.ReserveRequest) ([]byte, error)
+	// Cancels product reservation. If StorageId is passed, then cancellation will
+	// be performed in a storage specified only. Reserved products will be available for
+	// reservation again.
+	Cancel(ctx context.Context, req *dto.CancelRequest) ([]byte, error)
+	// Releases the reservation. If StorageId is passed, then reservation relese will be performed in
+	// a storage specified only. Reserved products will be written off from stock.
+	Release(ctx context.Context, req *dto.ReleaseRequest) ([]byte, error)
 }
 
 func NewReservationController(
@@ -64,7 +65,7 @@ func (c *reservationController) Reservations(
 	return response, nil
 }
 
-func (c *reservationController) Reserve(ctx context.Context, req *dto.ReserveRequest) error {
+func (c *reservationController) Reserve(ctx context.Context, req *dto.ReserveRequest) ([]byte, error) {
 	err := c.interactor.Reserve(ctx, interactors.ReserveParams{
 		ProductIds: req.Products,
 		StorageId:  req.StorageId,
@@ -72,34 +73,49 @@ func (c *reservationController) Reserve(ctx context.Context, req *dto.ReserveReq
 		Amount:     req.Amount,
 	})
 	if err != nil {
-		return fmt.Errorf("error reserve product for shipping. %w", err)
+		return nil, fmt.Errorf("error reserve product for shipping. %w", err)
 	}
 
-	return nil
+	response, err := c.presenter.ResponseReserve()
+	if err != nil {
+		return nil, fmt.Errorf("error build reservations response. %w", err)
+	}
+
+	return response, nil
 }
 
-func (c *reservationController) Cancel(ctx context.Context, req *dto.CancelRequest) error {
+func (c *reservationController) Cancel(ctx context.Context, req *dto.CancelRequest) ([]byte, error) {
 	err := c.interactor.Cancel(ctx, interactors.CancelParams{
 		ProductIds: req.Products,
 		ShippingId: req.ShippingId,
 		StorageId:  req.StorageId,
 	})
 	if err != nil {
-		return fmt.Errorf("error cancel product reservation. %w", err)
+		return nil, fmt.Errorf("error cancel product reservation. %w", err)
 	}
 
-	return nil
+	response, err := c.presenter.ResponseCancel()
+	if err != nil {
+		return nil, fmt.Errorf("error build reservations response. %w", err)
+	}
+
+	return response, nil
 }
 
-func (c *reservationController) Release(ctx context.Context, req *dto.ReleaseRequest) error {
+func (c *reservationController) Release(ctx context.Context, req *dto.ReleaseRequest) ([]byte, error) {
 	err := c.interactor.Release(ctx, interactors.ReleaseParams{
 		ProductIds: req.Products,
 		ShippingId: req.ShippingId,
 		StorageId:  req.StorageId,
 	})
 	if err != nil {
-		return fmt.Errorf("error release product reservation. %w", err)
+		return nil, fmt.Errorf("error release product reservation. %w", err)
 	}
 
-	return nil
+	response, err := c.presenter.ResponseRelease()
+	if err != nil {
+		return nil, fmt.Errorf("error build reservations response. %w", err)
+	}
+
+	return response, nil
 }

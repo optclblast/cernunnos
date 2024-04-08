@@ -15,7 +15,6 @@ type PrettyHandlerOptions struct {
 }
 
 type PrettyHandler struct {
-	opts PrettyHandlerOptions
 	slog.Handler
 	l     *stdlog.Logger
 	attrs []slog.Attr
@@ -59,6 +58,7 @@ func (h *PrettyHandler) Handle(_ context.Context, r slog.Record) error {
 	}
 
 	var b []byte
+
 	var err error
 
 	if len(fields) > 0 {
@@ -90,7 +90,6 @@ func (h *PrettyHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
 }
 
 func (h *PrettyHandler) WithGroup(name string) slog.Handler {
-	// TODO: implement
 	return &PrettyHandler{
 		Handler: h.Handler.WithGroup(name),
 		l:       h.l,

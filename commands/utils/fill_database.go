@@ -31,21 +31,33 @@ func (c *FillDatabaseCommand) Run(ctx context.Context) error {
 	g, gCtx := errgroup.WithContext(ctx)
 
 	p := make([]*models.ProductInfo, 0, 250)
+
 	g.Go(func() error {
 		var err error
+
 		p, err = c.fillProducts(gCtx)
-		return err
+		if err != nil {
+			return fmt.Errorf("error fill database with products. %w", err)
+		}
+
+		return nil
 	})
 
 	s := make([]*models.Storage, 85)
+
 	g.Go(func() error {
 		var err error
+
 		s, err = c.fillStorages(gCtx)
-		return err
+		if err != nil {
+			return fmt.Errorf("error fill database with storages. %w", err)
+		}
+
+		return nil
 	})
 
 	if err := g.Wait(); err != nil {
-		return err
+		return fmt.Errorf("error fill database with data. %w", err)
 	}
 
 	return c.destributeAndReserveProducts(ctx, p, s)

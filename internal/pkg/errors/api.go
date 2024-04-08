@@ -1,6 +1,7 @@
 package errors
 
 import (
+	"cernunnos/internal/usecase/interactors"
 	"cernunnos/internal/usecase/repository/reservations"
 	"errors"
 	"fmt"
@@ -41,6 +42,11 @@ func (e *errorHandler) Handle(err error) APIError {
 		return e.errorBuilder.Build(400, "Invalid Or Unexpected Request Data!")
 	case errors.Is(err, reservations.ErrorNotEnoughSpace):
 		return e.errorBuilder.Build(507, "Not Enough Space In Storage(s)!")
+	case errors.Is(err, interactors.ErrorFieldRequired):
+		return e.errorBuilder.Build(
+			400,
+			"Not All Required Fields Provided! See API Documentation for more info",
+		)
 	default:
 		return e.errorBuilder.Build(500, "Oops! Something went wrong!")
 	}

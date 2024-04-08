@@ -13,14 +13,14 @@ import (
 type ReservationInteractor interface {
 	// List product reservations
 	Reservations(ctx context.Context, params ReservationsParams) ([]*models.Reservation, error)
-	// Reserves a product. If StorageId is passed, then reservation will be performed in a storage specified WITHOUT
-	// reservation distributing
+	// Reserves a product. If StorageId is passed, then reservation will be performed in a
+	// storage specified WITHOUT reservation distributing
 	Reserve(ctx context.Context, params ReserveParams) error
-	// Cancels product reservation. If StorageId is passed, then cancellation will be performed in a storage specified only.
-	// Reserved products will be available for reservation again.
+	// Cancels product reservation. If StorageId is passed, then cancellation will be performed in a
+	// storage specified only. Reserved products will be available for reservation again.
 	Cancel(ctx context.Context, params CancelParams) error
-	// Releases the reservation. If StorageId is passed, then reservation relese will be performed in a storage specified only.
-	// Reserved products will be written off from stock.
+	// Releases the reservation. If StorageId is passed, then reservation relese will be performed in
+	// a storage specified only. Reserved products will be written off from stock.
 	Release(ctx context.Context, params ReleaseParams) error
 }
 
@@ -51,9 +51,20 @@ func (c *reservationInteractor) Reservations(
 	ctx context.Context,
 	params ReservationsParams,
 ) ([]*models.Reservation, error) {
-	ids, err := processIds([]string{params.ProductId}, params.StorageId, params.ShippingId)
-	if err != nil {
-		return nil, fmt.Errorf("error parse ids. %w", err)
+	var ids *reservationsIds = new(reservationsIds)
+
+	var err error
+
+	if params.ProductId != "" {
+		ids, err = processIds([]string{params.ProductId}, params.StorageId, params.ShippingId)
+		if err != nil {
+			return nil, fmt.Errorf("error parse ids. %w", err)
+		}
+	} else {
+		ids, err = processIds([]string{}, params.StorageId, params.ShippingId)
+		if err != nil {
+			return nil, fmt.Errorf("error parse ids. %w", err)
+		}
 	}
 
 	reservationsParams := reservationsRepo.ReservationsParams{
@@ -83,6 +94,11 @@ type ReserveParams struct {
 }
 
 func (c *reservationInteractor) Reserve(ctx context.Context, params ReserveParams) error {
+	if params.Amount == 0 || len(params.ProductIds) == 0 ||
+		params.ShippingId == "" {
+		return fmt.Errorf("error some of required fields are not provided. %w", ErrorFieldRequired)
+	}
+
 	ids, err := processIds(params.ProductIds, params.StorageId, params.ShippingId)
 	if err != nil {
 		return fmt.Errorf("error parse ids. %w", err)
@@ -108,6 +124,10 @@ type CancelParams struct {
 }
 
 func (c *reservationInteractor) Cancel(ctx context.Context, params CancelParams) error {
+	if len(params.ProductIds) == 0 || params.ShippingId == "" {
+		return fmt.Errorf("error some of required fields are not provided. %w", ErrorFieldRequired)
+	}
+
 	ids, err := processIds(params.ProductIds, params.StorageId, params.ShippingId)
 	if err != nil {
 		return fmt.Errorf("error parse ids. %w", err)
@@ -132,6 +152,10 @@ type ReleaseParams struct {
 }
 
 func (c *reservationInteractor) Release(ctx context.Context, params ReleaseParams) error {
+	if len(params.ProductIds) == 0 || params.ShippingId == "" {
+		return fmt.Errorf("error some of required fields are not provided. %w", ErrorFieldRequired)
+	}
+
 	ids, err := processIds(params.ProductIds, params.StorageId, params.ShippingId)
 	if err != nil {
 		return fmt.Errorf("error parse ids. %w", err)

@@ -16,11 +16,11 @@ import (
 type Repository interface {
 	Reservations(ctx context.Context, params ReservationsParams) ([]*models.Reservation, error)
 	Reserve(ctx context.Context, params ReserveParams) error
-	// Cancels product reservation. If StorageId is passed, then cancellation will be performed in a storage specified only.
-	// Reserved products will be available for reservation again.
+	// Cancels product reservation. If StorageId is passed, then cancellation will be
+	// performed in a storage specified only. Reserved products will be available for reservation again.
 	Cancel(ctx context.Context, params CancelParams) error
-	// Releases the reservation. If StorageId is passed, then reservation relese will be performed in a storage specified only.
-	// Reserved products will be written off from stock.
+	// Releases the reservation. If StorageId is passed, then reservation relese will be performed in
+	// a storage specified only. Reserved products will be written off from stock.
 	Release(ctx context.Context, params ReleaseParams) error
 }
 
@@ -62,6 +62,7 @@ func (r *repositorySql) Reservations(
 		if err != nil {
 			return fmt.Errorf("error fetch reservations data from database. %w", err)
 		}
+
 		defer func() {
 			if closeErr := rows.Close(); closeErr != nil {
 				err = errors.Join(fmt.Errorf("error close rows. %w", closeErr), err)
@@ -87,8 +88,9 @@ func (r *repositorySql) Reservations(
 				productCreatedAt time.Time
 				productUpdatedAt time.Time
 
-				productsDistributionReserved int64
-				productsDistributionAmount   int64
+				productsDistributionReserved  int64
+				productsDistributionAmount    int64
+				productsDistributionAvailable int64
 			)
 
 			if err = rows.Scan(
@@ -108,6 +110,7 @@ func (r *repositorySql) Reservations(
 				&productUpdatedAt,
 				&productsDistributionReserved,
 				&productsDistributionAmount,
+				&productsDistributionAvailable,
 			); err != nil {
 				return fmt.Errorf("error scan row. %w", err)
 			}
@@ -130,8 +133,9 @@ func (r *repositorySql) Reservations(
 							CreatedAt:    storageCreatedAt,
 							UpdatedAt:    storageUpdatedAt,
 						},
-						Amount:   productsDistributionAmount,
-						Reserved: productsDistributionReserved,
+						Amount:    productsDistributionAmount,
+						Reserved:  productsDistributionReserved,
+						Available: productsDistributionAvailable,
 					},
 				},
 				ShippingId: shippingId,
@@ -141,8 +145,13 @@ func (r *repositorySql) Reservations(
 			})
 		}
 
+		if err = rows.Err(); err != nil {
+			return fmt.Errorf("error process rows. %w", err)
+		}
+
 		return nil
 	})
+
 	if err != nil {
 		return nil, fmt.Errorf("error execure transactional operation. %w", err)
 	}
@@ -172,6 +181,7 @@ func buildSelectReservationsQuery(params ReservationsParams) sq.SelectBuilder {
 		// products_distribution
 		"pd.amount",
 		"pd.reserved",
+		"pd.available",
 	).
 		From("products_reservations as r").
 		InnerJoin("products as p on p.id = r.product_id").
@@ -208,8 +218,6 @@ func buildSelectReservationsQuery(params ReservationsParams) sq.SelectBuilder {
 		query = query.Offset(params.Offset)
 	}
 
-	fmt.Println(query.ToSql())
-
 	return query
 }
 
@@ -233,7 +241,6 @@ func (r *repositorySql) Reserve(ctx context.Context, params ReserveParams) error
 			}
 
 			for storageId, availableSlots := range storagesToReserve {
-				fmt.Println(storageId.String())
 				err = r.reserve(ctx, reserveParams{
 					productId:  productId,
 					storageId:  storageId,
@@ -350,7 +357,6 @@ func (r *repositorySql) storagesToReserveIn(
 			PlaceholderFormat(sq.Dollar)
 
 		if params.storageId != uuid.Nil {
-			fmt.Println(params.storageId.String())
 			isSpaceAvailableQuery = isSpaceAvailableQuery.Where(sq.Eq{
 				"storage_id": params.storageId,
 			})
@@ -360,34 +366,37 @@ func (r *repositorySql) storagesToReserveIn(
 		if err != nil {
 			return fmt.Errorf("error fetch available storages from database. %w", err)
 		}
+
 		defer func() {
 			if closeErr := rows.Close(); closeErr != nil {
 				err = errors.Join(fmt.Errorf("error close rows. %w", closeErr), err)
 			}
 		}()
 
-		fmt.Println(isSpaceAvailableQuery.ToSql())
-		fmt.Println(params.productId.String())
-
 		var left int64 = params.amount
 
 		for rows.Next() {
 			var storageId uuid.UUID = uuid.Nil
+
 			var available int64
 
 			if err := rows.Scan(&storageId, &available); err != nil {
 				return fmt.Errorf("error scan row. %w", err)
 			}
-			fmt.Println(storageId.String())
 
 			if available >= left {
 				uuids[storageId] = left
-				return err
+
+				return nil
 			} else {
-				left = left - available
+				left -= available
+
 				uuids[storageId] = available
 			}
+		}
 
+		if err = rows.Err(); err != nil {
+			return fmt.Errorf("error process rows. %w", err)
 		}
 
 		if left > 0 {
@@ -396,6 +405,7 @@ func (r *repositorySql) storagesToReserveIn(
 
 		return err
 	})
+
 	if err != nil {
 		return nil, fmt.Errorf("error execure transactional operation. %w", err)
 	}
@@ -516,12 +526,11 @@ func (r *repositorySql) reservedByStorage(
 			})
 		}
 
-		fmt.Println(selectReservations.ToSql())
-
 		rows, err := selectReservations.RunWith(r.Conn(ctx)).QueryContext(ctx)
 		if err != nil {
 			return fmt.Errorf("error fetch reservations from database. %w", err)
 		}
+
 		defer func() {
 			if closeErr := rows.Close(); closeErr != nil {
 				err = errors.Join(fmt.Errorf("error close rows. %w", closeErr), err)
@@ -530,6 +539,7 @@ func (r *repositorySql) reservedByStorage(
 
 		for rows.Next() {
 			var storageId uuid.UUID
+
 			var reserved int64
 
 			if err = rows.Scan(&storageId, &reserved); err != nil {
@@ -539,8 +549,13 @@ func (r *repositorySql) reservedByStorage(
 			reservations[storageId] = reserved
 		}
 
+		if err = rows.Err(); err != nil {
+			return fmt.Errorf("error process rows. %w", err)
+		}
+
 		return nil
 	})
+
 	if err != nil {
 		return nil, fmt.Errorf("error execure transactional operation. %w", err)
 	}

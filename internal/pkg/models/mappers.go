@@ -4,6 +4,7 @@ import "fmt"
 
 func MapStorageProductsToProductInfos(storageProducts []*StorageProduct) ([]*ProductInfo, error) {
 	infos := make([]*ProductInfo, len(storageProducts))
+
 	for i, storageProduct := range storageProducts {
 		info, err := MapStorageProductToProductInfo(storageProduct)
 		if err != nil {

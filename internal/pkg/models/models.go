@@ -46,7 +46,8 @@ type Reservation struct {
 }
 
 type ProductDestribution struct {
-	Storage  *Storage
-	Amount   int64
-	Reserved int64
+	Storage   *Storage
+	Amount    int64
+	Reserved  int64
+	Available int64
 }

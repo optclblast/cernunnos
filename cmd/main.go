@@ -64,7 +64,9 @@ func main() {
 
 			defer cleanup()
 
-			server.Start()
+			if err = server.Start(); err != nil {
+				panic(err)
+			}
 
 			return nil
 		},

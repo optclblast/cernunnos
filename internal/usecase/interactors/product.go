@@ -32,12 +32,11 @@ func NewProductInteractor(
 }
 
 type ProductsParams struct {
-	Ids              []string
-	StorageId        string
-	WithDestribution bool
-	WithUnavailable  bool
-	Limit            uint32
-	Offset           uint32
+	Ids             []string
+	StorageId       string
+	WithUnavailable bool
+	Limit           uint32
+	Offset          uint32
 }
 
 func (c *productInteractor) Products(
@@ -66,6 +65,8 @@ func (c *productInteractor) Products(
 				Ids:             ids,
 				StorageId:       storageUUID,
 				WithUnavailable: params.WithUnavailable,
+				Limit:           uint64(params.Limit),
+				Offset:          uint64(params.Offset),
 			},
 		)
 		if err != nil {
@@ -81,11 +82,9 @@ func (c *productInteractor) Products(
 	}
 
 	products, err := c.productsRepository.Products(ctx, productsRepo.ProductsParams{
-		Ids:             ids,
-		WithUnavailable: params.WithUnavailable,
-		WithDetribution: params.WithDestribution,
-		Limit:           params.Limit,
-		Offset:          params.Offset,
+		Ids:    ids,
+		Limit:  params.Limit,
+		Offset: params.Offset,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("error fetch products. %w", err)
@@ -125,8 +124,8 @@ func (c *productInteractor) StorageProducts(
 		ctx,
 		productsRepo.StorageProductsParams{
 			Ids:             ids,
-			StorageId:       storageUUID,
 			WithUnavailable: params.WithUnavailable,
+			StorageId:       storageUUID,
 		},
 	)
 	if err != nil {

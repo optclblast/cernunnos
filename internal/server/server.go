@@ -71,9 +71,6 @@ func (s *Server) initializeRouter() {
 		r.Get("/", s.handle(s.storages, "storages"))
 		r.Route("/{storage_id}/products", func(r chi.Router) {
 			r.Get("/", s.handle(s.storageProducts, "storage_products"))
-			r.Post("/", nil)               // todo add a new product (-s)
-			r.Put("/{product_id}", nil)    // todo edit product info on a storage
-			r.Delete("/{product_id}", nil) // todo remove product from storage
 		})
 	})
 
@@ -102,18 +99,16 @@ func (s *Server) handle(h handlerFunc, mathodName string) http.HandlerFunc {
 
 		resp, err := h(ctx, r)
 		if err != nil {
-			s.responseError(ctx, w, err, mathodName)
+			s.responseError(w, err, mathodName)
 
 			return
 		}
 
-		s.response(ctx, w, http.StatusOK, resp)
+		s.response(w, http.StatusOK, resp)
 	}
-
 }
 
 func (s *Server) responseError(
-	ctx context.Context,
 	w http.ResponseWriter,
 	e error,
 	methodName string,
@@ -131,14 +126,15 @@ func (s *Server) responseError(
 		return
 	}
 
+	w.Header().Add("Content-Type", "application/json")
 	w.WriteHeader(int(apiErr.Code))
+
 	if _, err = w.Write(out); err != nil {
 		log.Error("error write api error", logger.Err(err))
 	}
 }
 
 func (s *Server) response(
-	ctx context.Context,
 	w http.ResponseWriter,
 	code int,
 	response []byte,
@@ -164,6 +160,7 @@ func buildRequest[R any](r *http.Request) (*R, error) {
 	}()
 
 	var request R
+
 	if err = json.Unmarshal(rawBody, &request); err != nil {
 		return nil, errors.Join(
 			fmt.Errorf("error unmarshal request body. %w", err),

@@ -9,6 +9,7 @@ import (
 
 func MapStoragesFromModels(models []*models.Storage) ([]*Storage, error) {
 	mapped := make([]*Storage, len(models))
+
 	for i, model := range models {
 		if models == nil {
 			continue
@@ -46,6 +47,7 @@ func MapStorageFromModel(model *models.Storage) (*Storage, error) {
 
 func MapIdsToUUIDs(ids []string) (uuid.UUIDs, error) {
 	uuids := make(uuid.UUIDs, len(ids))
+
 	for i, id := range ids {
 		uuid, err := uuid.Parse(id)
 		if err != nil {
@@ -90,6 +92,7 @@ func MapStorageProductFromModel(storageProduct *models.StorageProduct) (*Storage
 			StorageId: storageProduct.Storage.Id.String(),
 			Amount:    storageProduct.Amount,
 			Reserved:  storageProduct.Reserved,
+			Available: storageProduct.Available,
 		},
 	}, nil
 }
@@ -145,6 +148,7 @@ func MapProductDestributionFromModel(destridutions []*models.ProductDestribution
 
 func MapStorageProductsToProductInfos(storageProducts []*StorageProduct) ([]*ProductInfo, error) {
 	infos := make([]*ProductInfo, len(storageProducts))
+
 	for i, storageProduct := range storageProducts {
 		info, err := MapStorageProductToProductInfo(storageProduct)
 		if err != nil {
@@ -180,6 +184,7 @@ func MapStorageProductToProductInfo(storageProduct *StorageProduct) (*ProductInf
 
 func MapReservationsFromModels(models []*models.Reservation) ([]*Reservation, error) {
 	reservations := make([]*Reservation, len(models))
+
 	for i, model := range models {
 		reservation, err := MapReservationFromModel(model)
 		if err != nil {

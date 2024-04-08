@@ -21,7 +21,6 @@ func (p *storagePresenter) ResponseStorages(storages []*models.Storage) ([]byte,
 	dtoStorages, err := dto.MapStoragesFromModels(storages)
 	if err != nil {
 		return nil, fmt.Errorf("error map storages to dto. %w", err)
-
 	}
 
 	response := dto.StoragesResponse{

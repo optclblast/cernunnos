@@ -25,6 +25,7 @@ type txCtxKey struct{}
 
 func Transaction(ctx context.Context, db *sql.DB, fn func(context.Context) error) error {
 	var err error
+
 	var tx *sql.Tx = new(sql.Tx)
 
 	hasExternalTx := hasExternalTransaction(ctx)
@@ -46,12 +47,14 @@ func Transaction(ctx context.Context, db *sql.DB, fn func(context.Context) error
 			}
 
 			err = fmt.Errorf("error execute transactional operation. %w", err)
+
 			return
 		}
 
 		if commitErr := tx.Commit(); commitErr != nil {
 			if rbErr := tx.Rollback(); rbErr != nil {
 				err = errors.Join(fmt.Errorf("error rollback transaction. %w", rbErr), commitErr, err)
+
 				return
 			}
 

@@ -37,12 +37,11 @@ func (c *productController) Products(
 	req *dto.ProductsRequest,
 ) ([]byte, error) {
 	products, err := c.interactor.Products(ctx, interactors.ProductsParams{
-		Ids:              req.Ids,
-		StorageId:        req.StorageId,
-		WithDestribution: req.WithDistribution,
-		WithUnavailable:  req.WithUnavailable,
-		Limit:            req.Limit,
-		Offset:           req.Offset,
+		Ids:             req.Ids,
+		StorageId:       req.StorageId,
+		WithUnavailable: req.WithUnavailable,
+		Limit:           req.Limit,
+		Offset:          req.Offset,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("error fetch products. %w", err)

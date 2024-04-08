@@ -24,7 +24,7 @@ type Storage struct {
 
 type StorageProductsRequest struct {
 	StorageId       string   // Fetched from URL params
-	ProductsIds     []string `json:"products_ids,omitempty"`
+	ProductsIds     []string `json:"ids,omitempty"`
 	WithUnavailable bool     `json:"with_unavailable,omitempty"`
 	Limit           uint32   `json:"limit,omitempty"`
 	Offset          uint32   `json:"offset,omitempty"`
@@ -50,12 +50,11 @@ type ProductInfo struct {
 }
 
 type ProductsRequest struct {
-	Ids              []string `json:"ids,omitempty"`
-	StorageId        string   `json:"storage_id,omitempty"`
-	WithDistribution bool     `json:"with_distribution,omitempty"` // Include product destribution info into response
-	WithUnavailable  bool     `json:"with_unavailable,omitempty"`  // Fetch with unavailable products
-	Limit            uint32   `json:"limit"`                       // Amount of items to fetch. Default and max 500
-	Offset           uint32   `json:"offset"`                      // Pagination
+	Ids             []string `json:"ids,omitempty"`
+	StorageId       string   `json:"storage_id,omitempty"`
+	WithUnavailable bool     `json:"with_unavailable,omitempty"`
+	Limit           uint32   `json:"limit"`  // Amount of items to fetch. Default and max 500
+	Offset          uint32   `json:"offset"` // Pagination
 }
 
 type ProductsResponse struct {
@@ -67,6 +66,7 @@ type ProductDestribution struct {
 	StorageId string `json:"storage_id,omitempty"`
 	Amount    int64  `json:"amount"`
 	Reserved  int64  `json:"reserved"`
+	Available int64  `json:"available"`
 }
 
 type Reservation struct {
@@ -98,7 +98,9 @@ type ReserveRequest struct {
 	Amount     int64    `json:"amount"`
 }
 
-type ReserveResponse struct{}
+type ReserveResponse struct {
+	Ok bool `json:"ok"`
+}
 
 type ReleaseRequest struct {
 	StorageId  string   `json:"storage_id,omitempty"`
@@ -106,7 +108,9 @@ type ReleaseRequest struct {
 	ShippingId string   `json:"shipping_id,omitempty"`
 }
 
-type ReleaseResponse struct{}
+type ReleaseResponse struct {
+	Ok bool `json:"ok"`
+}
 
 type CancelRequest struct {
 	StorageId  string   `json:"storage_id,omitempty"`
@@ -114,4 +118,6 @@ type CancelRequest struct {
 	ShippingId string   `json:"shipping_id,omitempty"`
 }
 
-type CancelResponse struct{}
+type CancelResponse struct {
+	Ok bool `json:"ok"`
+}
