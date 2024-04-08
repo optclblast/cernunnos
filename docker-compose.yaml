@@ -7,19 +7,21 @@ volumes:
   cernunnos-data: {}
 
 services:
-  # cernunnos:
-  #   image: cernunnos:latest
-  #   ports:
-  #     - 8080:8080
-  #   expose: 
-  #     - 8080
-  #   networks:
-  #     - net
-  #   depends_on:
-  #     cernunnos-db:
-  #       condition: service_started
+  cernunnos:
+    container_name: cernunnos
+    image: cernunnos:latest
+    ports:
+      - 8080:8080
+    expose: 
+      - 8080
+    networks:
+      - net
+    depends_on:
+      cernunnos-db:
+        condition: service_started
 
   cernunnos-db:
+    container_name: cernunnos-db
     image: postgres:16
     restart: always
     environment:

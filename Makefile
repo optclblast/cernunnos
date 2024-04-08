@@ -18,7 +18,7 @@ lint:
 	${TOOLS_BIN}/golangci-lint run --config ./.golangci.yaml  ./...
 
 filldb:
-	sudo docker exec -it lamoda-tech-task-cernunnos-1 \
+	sudo docker exec -it cernunnos \
 		/app/cernunnos fill-db \
 		-log-level=debug \
 		-db-host=cernunnos-db:5432 \
