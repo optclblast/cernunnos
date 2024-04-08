@@ -19,9 +19,9 @@ make lint # Запустит линтер
 
 Формат дат в ответе - unix milli.   
 
-Получение списка продуктов
-Эндпоинт **\[GET\] /products**
-Пример запроса:
+Получение списка продуктов    
+Эндпоинт **\[GET\] /products**    
+Пример запроса:    
 ```bash
 curl --location --request GET 'http://localhost:8080/products' \
 --header 'Content-Type: application/json' \
@@ -78,9 +78,9 @@ curl --location --request GET 'http://localhost:8080/products' \
 }
 ```
 
-Получение списка товаров на конкретном складе   
-Эндпоинт **\[GET\] /storages/{storage_id}/products**
-Пример запроса:
+Получение списка товаров на конкретном складе      
+Эндпоинт **\[GET\] /storages/{storage_id}/products**    
+Пример запроса:    
 ``` bash
 curl --location --request GET 'http://localhost:8080/storages/efde90c8-4184-436b-acf8-a673477b24fe/products' \
 --header 'Content-Type: application/json' \
@@ -149,9 +149,9 @@ curl --location --request GET 'http://localhost:8080/storages/efde90c8-4184-436b
 }
 ```
 
-Получение списка резервов продуктов для доставки
-Эндпоинт **\[GET\] /reservations**
-Пример запроса:
+Получение списка резервов продуктов для доставки   
+Эндпоинт **\[GET\] /reservations**  
+Пример запроса:   
 ```bash
 curl --location --request GET 'http://localhost:8080/reservations' \
 --header 'Content-Type: application/json' \
@@ -193,9 +193,9 @@ curl --location --request GET 'http://localhost:8080/reservations' \
 }
 ```
 
-Создание резерва продуктов для доставки на складе
-Эндпоинт **\[POST\] /reservations/new**
-Пример запроса:
+Создание резерва продуктов для доставки на складе    
+Эндпоинт **\[POST\] /reservations/new**   
+Пример запроса:   
 ```bash
 curl --location 'http://localhost:8080/reservations/new' \
 --header 'Content-Type: application/json' \
@@ -243,9 +243,9 @@ curl --location 'http://localhost:8080/reservations/new' \
 ```
 
 
-Отмена резерва продуктов для доставки на складе
-Эндпоинт **\[DELETE\] /reservations/cancel**
-Пример запроса:
+Отмена резерва продуктов для доставки на складе    
+Эндпоинт **\[DELETE\] /reservations/cancel**    
+Пример запроса:    
 ```bash
 curl --location --request DELETE 'http://localhost:8080/reservations/cancel' \
 --header 'Content-Type: application/json' \
@@ -282,9 +282,9 @@ curl --location --request DELETE 'http://localhost:8080/reservations/cancel' \
 }
 ```
 
-Списание зарезервированных товаров со склада
-Эндпоинт **\[DELETE\] /reservations/release**
-Пример запроса:
+Списание зарезервированных товаров со склада    
+Эндпоинт **\[DELETE\] /reservations/release**    
+Пример запроса:    
 ```bash
 curl --location --request DELETE 'http://localhost:8080/reservations/release' \
 --header 'Content-Type: application/json' \
