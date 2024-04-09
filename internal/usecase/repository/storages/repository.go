@@ -15,11 +15,9 @@ import (
 
 // Filter
 type StoragesParams struct {
-	Ids             []uuid.UUID // If passed, only listed storages will be fetched
-	WithBusy        bool        // Fetch busy storages
-	WithUnavailable bool        // Fetch unavailable storages
-	Limit           uint64      // Limit. Max: 500
-	Offset          uint64      // Offset
+	Ids    []uuid.UUID // If passed, only listed storages will be fetched
+	Limit  uint64      // Limit. Max: 500
+	Offset uint64      // Offset
 }
 
 // Storages repository
@@ -67,23 +65,25 @@ func (r *repositorySql) Storages(ctx context.Context, params StoragesParams) ([]
 
 		for rows.Next() {
 			var (
-				id           uuid.UUID
-				name         string
-				availability models.StorageAvailability
-				createdAt    time.Time
-				updatedAt    time.Time
+				id        uuid.UUID
+				name      string
+				available int64
+				reserved  int64
+				createdAt time.Time
+				updatedAt time.Time
 			)
 
-			if err := rows.Scan(&id, &name, &availability, &createdAt, &updatedAt); err != nil {
+			if err := rows.Scan(&id, &name, &available, &reserved, &createdAt, &updatedAt); err != nil {
 				return fmt.Errorf("error scan rows. %w", err)
 			}
 
 			storages = append(storages, &models.Storage{
-				Id:           id,
-				Name:         name,
-				Availability: availability,
-				CreatedAt:    createdAt,
-				UpdatedAt:    updatedAt,
+				Id:        id,
+				Name:      name,
+				Available: available,
+				Reserved:  reserved,
+				CreatedAt: createdAt,
+				UpdatedAt: updatedAt,
 			})
 		}
 
@@ -101,7 +101,7 @@ func (r *repositorySql) Storages(ctx context.Context, params StoragesParams) ([]
 }
 
 func buildStoragesQuery(params StoragesParams) sq.SelectBuilder {
-	selectQuery := sq.Select("id", "name", "availability", "created_at", "updated_at").
+	selectQuery := sq.Select("id", "name", "available", "reserved", "created_at", "updated_at").
 		From("storages").
 		Limit(uint64(sqltools.DefaultLimit)).
 		Suffix("for update").
@@ -115,22 +115,6 @@ func buildStoragesQuery(params StoragesParams) sq.SelectBuilder {
 		selectQuery = selectQuery.Where(
 			sq.Eq{
 				"id": params.Ids,
-			},
-		)
-	}
-
-	if !params.WithBusy {
-		selectQuery = selectQuery.Where(
-			sq.NotEq{
-				"availability": models.StorageAvailabilityBusy,
-			},
-		)
-	}
-
-	if !params.WithUnavailable {
-		selectQuery = selectQuery.Where(
-			sq.NotEq{
-				"availability": models.StorageAvailabilityUnavailable,
 			},
 		)
 	}

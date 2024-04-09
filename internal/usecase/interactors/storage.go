@@ -29,9 +29,9 @@ func NewStorageInteractor(
 }
 
 type StoragesParams struct {
-	Ids             []string
-	WithBusy        bool
-	WithUnavailable bool
+	Ids    []string
+	Limit  uint32
+	Offset uint32
 }
 
 func (c *storageInteractor) Storages(ctx context.Context, params StoragesParams) ([]*models.Storage, error) {
@@ -41,9 +41,9 @@ func (c *storageInteractor) Storages(ctx context.Context, params StoragesParams)
 	}
 
 	storages, err := c.storagesRepository.Storages(ctx, storagesRepo.StoragesParams{
-		Ids:             uuids,
-		WithBusy:        params.WithBusy,
-		WithUnavailable: params.WithUnavailable,
+		Ids:    uuids,
+		Limit:  uint64(params.Limit),
+		Offset: uint64(params.Offset),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("error fetch storages from database. %w", err)

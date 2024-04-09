@@ -76,11 +76,12 @@ func (r *repositorySql) Reservations(
 				reservationCreatedAt time.Time
 				reservationUpdatedAt time.Time
 
-				storageId           uuid.UUID
-				storageName         string
-				storageAvailability models.StorageAvailability
-				storageCreatedAt    time.Time
-				storageUpdatedAt    time.Time
+				storageId          uuid.UUID
+				storageName        string
+				availableInStorage int64
+				reservedInStorage  int64
+				storageCreatedAt   time.Time
+				storageUpdatedAt   time.Time
 
 				productId        uuid.UUID
 				productName      string
@@ -100,7 +101,8 @@ func (r *repositorySql) Reservations(
 				&reservationUpdatedAt,
 				&storageId,
 				&storageName,
-				&storageAvailability,
+				&availableInStorage,
+				&reservedInStorage,
 				&storageCreatedAt,
 				&storageUpdatedAt,
 				&productId,
@@ -127,11 +129,12 @@ func (r *repositorySql) Reservations(
 					},
 					ProductDestribution: models.ProductDestribution{
 						Storage: &models.Storage{
-							Id:           storageId,
-							Name:         storageName,
-							Availability: storageAvailability,
-							CreatedAt:    storageCreatedAt,
-							UpdatedAt:    storageUpdatedAt,
+							Id:        storageId,
+							Name:      storageName,
+							Available: availableInStorage,
+							Reserved:  reservedInStorage,
+							CreatedAt: storageCreatedAt,
+							UpdatedAt: storageUpdatedAt,
 						},
 						Amount:    productsDistributionAmount,
 						Reserved:  productsDistributionReserved,
@@ -169,7 +172,8 @@ func buildSelectReservationsQuery(params ReservationsParams) sq.SelectBuilder {
 		// storages
 		"s.id",
 		"s.name",
-		"s.availability",
+		"s.available",
+		"s.reserved",
 		"s.created_at",
 		"s.updated_at",
 		// products
@@ -187,7 +191,8 @@ func buildSelectReservationsQuery(params ReservationsParams) sq.SelectBuilder {
 		InnerJoin("products as p on p.id = r.product_id").
 		InnerJoin("storages as s on s.id = r.storage_id").
 		InnerJoin(
-			"products_distribution as pd on pd.storage_id = r.storage_id AND pd.product_id = r.product_id",
+			`products_distribution as pd on pd.storage_id = r.storage_id AND 
+			pd.product_id = r.product_id`,
 		).PlaceholderFormat(sq.Dollar)
 
 	if params.ProductId != uuid.Nil {
@@ -400,7 +405,10 @@ func (r *repositorySql) storagesToReserveIn(
 		}
 
 		if left > 0 {
-			return fmt.Errorf("error all storages are busy. %w", ErrorNotEnoughSpace)
+			return fmt.Errorf(
+				"error there are not enough products to reserve. %w",
+				ErrorNotEnoughProducts,
+			)
 		}
 
 		return err
@@ -579,6 +587,22 @@ func (r *repositorySql) freeReservation(ctx context.Context, params cancelReserv
 			"product_id": params.productId,
 			"storage_id": params.storageId,
 		}).PlaceholderFormat(sq.Dollar)
+
+		if params.writeOff {
+			updateStorage := sq.Update("storages").
+				SetMap(sq.Eq{
+					"available": sq.Expr("available + ?", params.amount),
+					"reserved":  sq.Expr("reserved - ?", params.amount),
+				}).
+				Where(sq.Eq{
+					"id": params.storageId,
+				}).
+				PlaceholderFormat(sq.Dollar)
+
+			if _, err := updateStorage.RunWith(r.Conn(ctx)).ExecContext(ctx); err != nil {
+				return fmt.Errorf("error update storage availability status. %w", err)
+			}
+		}
 
 		if !params.writeOff {
 			query = query.Set("available", sq.Expr("available + ?", params.amount))

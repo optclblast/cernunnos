@@ -33,9 +33,9 @@ func NewStorageController(
 
 func (c *storageController) Storages(ctx context.Context, req *dto.StoragesRequest) ([]byte, error) {
 	storages, err := c.interactor.Storages(ctx, interactors.StoragesParams{
-		Ids:             req.Ids,
-		WithBusy:        req.WithBusy,
-		WithUnavailable: req.WithUnavailable,
+		Ids:    req.Ids,
+		Limit:  req.Limit,
+		Offset: req.Offset,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("error fetch storages. %w", err)

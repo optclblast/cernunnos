@@ -16,4 +16,4 @@ RUN go build -ldflags="-s -w" -o /app/cernunnos cmd/main.go
 
 EXPOSE 8080
 
-CMD ["/app/cernunnos", "-log-level=debug", "-address=0.0.0.0:8080", "-db-host=cernunnos-db:5432", "-db-user=cernunnos", "-db-password=cernunnos"]
+CMD ["/app/cernunnos", "-log-level=info", "-address=0.0.0.0:8080", "-db-host=cernunnos-db:5432", "-db-user=cernunnos", "-db-password=cernunnos"]

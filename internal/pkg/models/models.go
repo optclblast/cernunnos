@@ -6,20 +6,13 @@ import (
 	"github.com/google/uuid"
 )
 
-type StorageAvailability string
-
-const (
-	StorageAvailabilityAvailable   StorageAvailability = "available"
-	StorageAvailabilityBusy        StorageAvailability = "busy"
-	StorageAvailabilityUnavailable StorageAvailability = "unavailable"
-)
-
 type Storage struct {
-	Id           uuid.UUID
-	Name         string
-	Availability StorageAvailability
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	Id        uuid.UUID
+	Name      string
+	Reserved  int64
+	Available int64
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 type ProductInfo struct {

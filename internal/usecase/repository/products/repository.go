@@ -252,11 +252,12 @@ func (r *repositorySql) fetchStorageProductsWithQuery(
 
 		for rows.Next() {
 			var (
-				storageId           uuid.UUID
-				storageName         string
-				storageAvailability models.StorageAvailability
-				storageCreatedAt    time.Time
-				storageUpdatedAt    time.Time
+				storageId        uuid.UUID
+				storageName      string
+				available        int64
+				reserved         int64
+				storageCreatedAt time.Time
+				storageUpdatedAt time.Time
 
 				productId        uuid.UUID
 				productName      string
@@ -272,7 +273,8 @@ func (r *repositorySql) fetchStorageProductsWithQuery(
 			if err = rows.Scan(
 				&storageId,
 				&storageName,
-				&storageAvailability,
+				&available,
+				&reserved,
 				&storageCreatedAt,
 				&storageUpdatedAt,
 				&productId,
@@ -297,11 +299,12 @@ func (r *repositorySql) fetchStorageProductsWithQuery(
 				},
 				ProductDestribution: models.ProductDestribution{
 					Storage: &models.Storage{
-						Id:           storageId,
-						Name:         storageName,
-						Availability: storageAvailability,
-						CreatedAt:    storageCreatedAt,
-						UpdatedAt:    storageUpdatedAt,
+						Id:        storageId,
+						Name:      storageName,
+						Available: available,
+						Reserved:  reserved,
+						CreatedAt: storageCreatedAt,
+						UpdatedAt: storageUpdatedAt,
 					},
 					Amount:    productsDistributionAmount,
 					Reserved:  productsDistributionReserved,
@@ -337,7 +340,8 @@ func buildSelectStorageProductQuery(params buildSelectStorageProductQueryParams)
 		// storages
 		"s.id",
 		"s.name",
-		"s.availability",
+		"s.available",
+		"s.reserved",
 		"s.created_at",
 		"s.updated_at",
 		// products

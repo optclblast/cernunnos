@@ -1,11 +1,9 @@
 package dto
 
 type StoragesRequest struct {
-	Ids             []string `json:"ids,omitempty"`
-	WithBusy        bool     `json:"with_busy,omitempty"`
-	WithUnavailable bool     `json:"with_unavailable,omitempty"`
-	Limit           uint32   `json:"limit,omitempty"`
-	Offset          uint32   `json:"offset,omitempty"`
+	Ids    []string `json:"ids,omitempty"`
+	Limit  uint32   `json:"limit,omitempty"`
+	Offset uint32   `json:"offset,omitempty"`
 }
 
 type StoragesResponse struct {
@@ -15,11 +13,12 @@ type StoragesResponse struct {
 
 // Storage DTO object
 type Storage struct {
-	Id           string `json:"id"`
-	Name         string `json:"name"`
-	Availability string `json:"availability"` // possible values: "available", "unavailable", "busy"
-	CreatedAt    uint64 `json:"created_at"`   // unix milli
-	UpdatedAt    uint64 `json:"updated_at"`   // unix milli
+	Id        string `json:"id"`
+	Name      string `json:"name"`
+	Reserved  int64  `json:"reserved"`
+	Available int64  `json:"available"`
+	CreatedAt uint64 `json:"created_at"` // unix milli
+	UpdatedAt uint64 `json:"updated_at"` // unix milli
 }
 
 type StorageProductsRequest struct {

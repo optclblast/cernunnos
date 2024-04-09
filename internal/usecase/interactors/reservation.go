@@ -94,7 +94,7 @@ type ReserveParams struct {
 }
 
 func (c *reservationInteractor) Reserve(ctx context.Context, params ReserveParams) error {
-	if params.Amount == 0 || len(params.ProductIds) == 0 ||
+	if params.Amount <= 0 || len(params.ProductIds) == 0 ||
 		params.ShippingId == "" {
 		return fmt.Errorf("error some of required fields are not provided. %w", ErrorFieldRequired)
 	}

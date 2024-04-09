@@ -100,19 +100,22 @@ func (c *FillDatabaseCommand) fillStorages(ctx context.Context) ([]*models.Stora
 
 	for i := 0; i < 85; i++ {
 		storage := &models.Storage{
-			Id:           uuid.New(),
-			Name:         gofakeit.BeerName(),
-			Availability: randAvailability(),
-			CreatedAt:    time.Now(),
-			UpdatedAt:    time.Now(),
+			Id:        uuid.New(),
+			Name:      gofakeit.BeerName(),
+			Available: rand.Int63n(100000) + 1000,
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
 		}
 
+		storage.Reserved = rand.Int63n(storage.Available - 1)
+
 		query := sq.Insert("storages").Columns(
-			"id", "name", "availability", "created_at", "updated_at",
+			"id", "name", "available", "reserved", "created_at", "updated_at",
 		).Values(
 			storage.Id,
 			storage.Name,
-			storage.Availability,
+			storage.Available,
+			storage.Reserved,
 			storage.CreatedAt,
 			storage.UpdatedAt,
 		).PlaceholderFormat(sq.Dollar)
@@ -127,36 +130,31 @@ func (c *FillDatabaseCommand) fillStorages(ctx context.Context) ([]*models.Stora
 	return storages, nil
 }
 
-func randAvailability() models.StorageAvailability {
-	n := rand.Int31n(300)
-	if n < 100 {
-		return models.StorageAvailabilityAvailable
-	}
-
-	if n >= 100 && n < 200 {
-		return models.StorageAvailabilityBusy
-	}
-
-	return models.StorageAvailabilityUnavailable
-}
-
 func (c *FillDatabaseCommand) destributeAndReserveProducts(
 	ctx context.Context,
 	products []*models.ProductInfo,
 	storages []*models.Storage,
 ) error {
+	storageFreeSpace := make(map[uuid.UUID]int64)
+
+	for _, s := range storages {
+		storageFreeSpace[s.Id] = s.Reserved
+	}
+
 	for _, p := range products {
 		for _, s := range storages {
 			if rand.Intn(100) > 50 {
 				continue
 			}
 
-			amount := rand.Int63n(10000)
+			amount := rand.Int63n(storageFreeSpace[s.Id] / 3)
 
 			var reserved int64
 			if amount > 0 {
 				reserved = rand.Int63n(amount)
 			}
+
+			storageFreeSpace[s.Id] -= amount
 
 			insert := sq.Insert("products_distribution").
 				Columns(

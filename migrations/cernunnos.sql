@@ -1,13 +1,8 @@
-create type availability as enum (
-	'available',
-	'busy',
-	'unavailable'
-);
-
 create table if not exists storages (
         id UUID primary key,
         name varchar(300),
-        availability availability,
+        available bigint,
+        reserved bigint,
         created_at timestamp default current_timestamp,
         updated_at timestamp default current_timestamp
 );

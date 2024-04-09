@@ -31,17 +31,13 @@ func MapStorageFromModel(model *models.Storage) (*Storage, error) {
 		return nil, fmt.Errorf("error nil storage model")
 	}
 
-	availability, err := mapStorageAvailability(model.Availability)
-	if err != nil {
-		return nil, fmt.Errorf("error map storage availability to dto. %w", err)
-	}
-
 	return &Storage{
-		Id:           model.Id.String(),
-		Name:         model.Name,
-		Availability: availability,
-		CreatedAt:    uint64(model.CreatedAt.UnixMilli()),
-		UpdatedAt:    uint64(model.UpdatedAt.UnixMilli()),
+		Id:        model.Id.String(),
+		Name:      model.Name,
+		Available: model.Available,
+		Reserved:  model.Reserved,
+		CreatedAt: uint64(model.CreatedAt.UnixMilli()),
+		UpdatedAt: uint64(model.UpdatedAt.UnixMilli()),
 	}, nil
 }
 
@@ -210,17 +206,4 @@ func MapReservationFromModel(model *models.Reservation) (*Reservation, error) {
 		CreatedAt:  uint64(model.CreatedAt.UnixMilli()),
 		UpdatedAt:  uint64(model.UpdatedAt.UnixMilli()),
 	}, nil
-}
-
-func mapStorageAvailability(availability models.StorageAvailability) (string, error) {
-	switch availability {
-	case models.StorageAvailabilityAvailable:
-		return "available", nil
-	case models.StorageAvailabilityUnavailable:
-		return "unavailable", nil
-	case models.StorageAvailabilityBusy:
-		return "busy", nil
-	default:
-		return "", fmt.Errorf("error unexpected availability status")
-	}
 }

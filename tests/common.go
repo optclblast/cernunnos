@@ -2,18 +2,16 @@ package tests
 
 import (
 	"cernunnos/internal/pkg/config"
-	"cernunnos/internal/pkg/models"
 	"context"
 	"database/sql"
 	"fmt"
-	"math/rand"
 
 	"github.com/Masterminds/squirrel"
 	"github.com/google/uuid"
 )
 
 var cfg config.Config = config.Config{
-	DatabaseHost:     "localhost:8080",
+	DatabaseHost:     "cernunnos-db:5432",
 	DatabaseUser:     "cernunnos",
 	DatabasePassword: "cernunnos",
 }
@@ -67,20 +65,22 @@ func insertProducts(ctx context.Context, db *sql.DB, params insertProductsParams
 }
 
 type insertStoragesParams struct {
-	storageId    uuid.UUID
-	storageName  string
-	availability models.StorageAvailability
+	storageId   uuid.UUID
+	storageName string
+	available   int64
+	reserved    int64
 }
 
 func insertStorages(ctx context.Context, db *sql.DB, params insertStoragesParams) error {
 	productsQuery := squirrel.Insert("storages").
 		Columns(
-			"id", "name", "availability",
+			"id", "name", "available", "reserved",
 		).
 		Values(
 			params.storageId,
 			params.storageName,
-			params.availability,
+			params.available,
+			params.reserved,
 		).
 		PlaceholderFormat(squirrel.Dollar)
 
@@ -89,17 +89,4 @@ func insertStorages(ctx context.Context, db *sql.DB, params insertStoragesParams
 	}
 
 	return nil
-}
-
-func randAvailability() models.StorageAvailability {
-	n := rand.Int31n(300)
-	if n < 100 {
-		return models.StorageAvailabilityAvailable
-	}
-
-	if n >= 100 && n < 200 {
-		return models.StorageAvailabilityBusy
-	}
-
-	return models.StorageAvailabilityUnavailable
 }

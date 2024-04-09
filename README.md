@@ -85,21 +85,59 @@ curl --location --request GET 'http://localhost:8080/products' \
 }
 ```
 
+### Получение списка складов     
+Эндпоинт **\[GET\] /storages**     
+Пример запроса:    
+``` bash
+curl --location --request GET 'localhost:8081/storages' \
+--header 'Content-Type: application/json' \
+--data '{
+    "ids":[
+        "db434e41-b1cc-4f88-b804-83a66e024db2"
+    ],
+    "limit":25,
+    "offset":0
+}'
+```
+Параметры:    
+1. ids | type:strings-array \[optional\]   
+Если передан, то выборка будет производится только по перечисленным складам.   
+2. limit | type:int \[optional\]    
+Параметр позволяет ограничить размер коллекции в ответе. Максимум элементов - 500.   
+3. offset | type:int \[optional\]    
+Параметр, предназначенный для пагинации. Поскольку размер выборки ограничен 500 элементами, мы можем отправить несколько запросов (если нужно), передав в каждом последующем offset из ответа   
+
+Пример ответа:   
+```json 
+{
+    "storages": [
+        {
+            "id": "db434e41-b1cc-4f88-b804-83a66e024db2",
+            "name": "Maudite",
+            "reserved": 28117,
+            "available": 87776,
+            "created_at": 1712690332997,
+            "updated_at": 1712690332997
+        }
+    ],
+    "offset": 1
+}
+```
+
 ### Получение списка товаров на конкретном складе      
 Эндпоинт **\[GET\] /storages/{storage_id}/products**    
 Пример запроса:    
 ``` bash
-curl --location --request GET 'http://localhost:8080/storages/efde90c8-4184-436b-acf8-a673477b24fe/products' \
+curl --location --request GET 'http://localhost:8080/storages/db434e41-b1cc-4f88-b804-83a66e024db2/products' \
 --header 'Content-Type: application/json' \
 --data '{
-    "ids":[
-        "eaecc1cd-7d7d-4aff-a4b7-eeb255028773",
-        "bad6c6c4-8f62-4b8b-b4dc-5424fc95c4dc",
-        "016f7a44-8317-468c-8988-b8139c872fa4"
+    "ids": [
+        "25937bb3-d77f-45f9-ab92-c955dbe71c78",
+        "a3d0292e-d0be-4292-857f-4e9b7cd825c4"
     ],
-    "with_unavailable":true,
-    "limit":25,
-    "offset":0
+    "with_unavailable": true,
+    "limit": 25,
+    "offset": 0
 }'
 ```
 Параметры:   
@@ -108,9 +146,9 @@ curl --location --request GET 'http://localhost:8080/storages/efde90c8-4184-436b
 2. storage_id | type:string \[optional\]    
 Если передан, выборка будет производится только в определенном складе   
 3. limit | type:int \[optional\]    
-Параметр позволяет ограничить размер коллекции в ответе. Максимум элекментов - 500.   
+Параметр позволяет ограничить размер коллекции в ответе. Максимум элементов - 500.   
 4. offset | type:int \[optional\]    
-Параметр, предназначенный для пагинации. Поскольку размер выборки ограничен 500 элементами, мы можем отправить несколько запросов (если нужно), передав в кажлм последующем offset из ответа   
+Параметр, предназначенный для пагинации. Поскольку размер выборки ограничен 500 элементами, мы можем отправить несколько запросов (если нужно), передав в каждом последующем offset из ответа   
 5. with_unavailable | type:bool  \[optional\]   
 Если передан, в ответ придет только те продукты, которые не зарезервированы полностью (available > 0)
 
@@ -119,40 +157,29 @@ curl --location --request GET 'http://localhost:8080/storages/efde90c8-4184-436b
 {
     "products": [
         {
-            "id": "eaecc1cd-7d7d-4aff-a4b7-eeb255028773",
-            "name": "Yellow Smart Speaker Edge",
-            "size": 100,
-            "created_at": 1712604303628,
-            "updated_at": 1712604303628,
-            "storage_id": "efde90c8-4184-436b-acf8-a673477b24fe",
-            "amount": 4778,
-            "reserved": 3105,
-            "available": 1673
+            "id": "25937bb3-d77f-45f9-ab92-c955dbe71c78",
+            "name": "Microwave Bright Advanced",
+            "size": 173,
+            "created_at": 1712690332988,
+            "updated_at": 1712690332988,
+            "storage_id": "db434e41-b1cc-4f88-b804-83a66e024db2",
+            "amount": 8728,
+            "reserved": 3843,
+            "available": 4885
         },
         {
-            "id": "bad6c6c4-8f62-4b8b-b4dc-5424fc95c4dc",
-            "name": "Gray Lightbulb Elite",
-            "size": 232,
-            "created_at": 1712604303630,
-            "updated_at": 1712604303630,
-            "storage_id": "efde90c8-4184-436b-acf8-a673477b24fe",
-            "amount": 734,
-            "reserved": 217,
-            "available": 517
-        },
-        {
-            "id": "016f7a44-8317-468c-8988-b8139c872fa4",
-            "name": "Sleek Gps-Enabled Earbuds",
-            "size": 177,
-            "created_at": 1712604303636,
-            "updated_at": 1712604303636,
-            "storage_id": "efde90c8-4184-436b-acf8-a673477b24fe",
-            "amount": 7346,
-            "reserved": 7346,
-            "available": 0
+            "id": "a3d0292e-d0be-4292-857f-4e9b7cd825c4",
+            "name": "Eco-Friendly Gadget Innovative",
+            "size": 247,
+            "created_at": 1712690333004,
+            "updated_at": 1712690333004,
+            "storage_id": "db434e41-b1cc-4f88-b804-83a66e024db2",
+            "amount": 3111,
+            "reserved": 288,
+            "available": 2823
         }
     ],
-    "offset": 3
+    "offset": 2
 }
 ```
 
@@ -162,7 +189,6 @@ curl --location --request GET 'http://localhost:8080/storages/efde90c8-4184-436b
 ```bash
 curl --location --request GET 'http://localhost:8080/reservations' \
 --header 'Content-Type: application/json' \
---header 'Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.e30.AgysaK1YbSCnCsOgZQ2yOoB1iC32uOPqI2rfFgMxfeU' \
 --data '{
     "storage_id":"d910311b-b77c-48a2-be38-8e4b301e9de2",
     "product_id":"d6dc4546-7663-4d1d-ba28-dddb04b49053",
@@ -206,7 +232,6 @@ curl --location --request GET 'http://localhost:8080/reservations' \
 ```bash
 curl --location 'http://localhost:8080/reservations/new' \
 --header 'Content-Type: application/json' \
---header 'Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.e30.AgysaK1YbSCnCsOgZQ2yOoB1iC32uOPqI2rfFgMxfeU' \
 --data '{
     "products": [
         "d6dc4546-7663-4d1d-ba28-dddb04b49053"
