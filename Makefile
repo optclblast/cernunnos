@@ -10,14 +10,6 @@ up:
 	sudo docker buildx build . -t cernunnos:latest
 	sudo docker compose up -d
 
-	sleep 5 
-
-	sudo docker exec -it cernunnos \
-		/app/cernunnos fill-db \
-		-db-host=cernunnos-db:5432 \
-		-db-user=cernunnos \
-		-db-password=cernunnos
-
 start:
 	sudo docker network create --driver bridge --subnet=192.168.2.0/24 --attachable cernunnos-net;
 	sudo docker buildx build . -t cernunnos:latest

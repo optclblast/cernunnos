@@ -22,6 +22,17 @@ services:
       cernunnos-db:
         condition: service_started
 
+  
+  cernunnos-filldb:
+    container_name: cernunnos-filldb
+    image: cernunnos:latest
+    entrypoint: ["/app/cernunnos", "fill-db", "-db-host=cernunnos-db:5432", "-db-user=cernunnos", "-db-password=cernunnos"]
+    networks:
+      - cernunnos-net
+    depends_on:
+      cernunnos-db:
+        condition: service_started
+
   cernunnos-db:
     container_name: cernunnos-db
     image: postgres:16
