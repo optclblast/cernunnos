@@ -93,7 +93,7 @@ curl --location --request GET 'http://localhost:8080/products' \
 Эндпоинт **\[GET\] /storages**     
 Пример запроса:    
 ``` bash
-curl --location --request GET 'localhost:8081/storages' \
+curl --location --request GET 'localhost:8080/storages' \
 --header 'Content-Type: application/json' \
 --data '{
     "ids":[
