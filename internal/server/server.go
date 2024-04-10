@@ -88,7 +88,7 @@ func (s *Server) initializeRouter() {
 	s.Mux = router
 }
 
-const requestTimeout time.Duration = 1000000 * time.Second
+const requestTimeout time.Duration = 15 * time.Second
 
 type handlerFunc func(ctx context.Context, r *http.Request) ([]byte, error)
 
